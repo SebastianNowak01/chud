@@ -1,0 +1,21 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run API" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="chud" />
+    <working_directory value="$PROJECT_DIR$/chud-server/src" />
+    <envs>
+      <env name="API_PORT" value="2137" />
+      <env name="LOG_LEVEL" value="TRACE" />
+      <env name="JWT_SECRET" value="your_jwt_secret" />
+      <env name="JWT_EXPIRY_HOURS" value="24" />
+      <env name="ADMIN_USER" value="admin" />
+      <env name="ADMIN_PASSWORD" value="123123" />
+      <env name="DATABASE_URL" value="postgres://chud:chud@localhost:5432/chud?sslmode=disable" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="github.com/sebnow/chud" />
+    <directory value="$PROJECT_DIR$/chud-server/src" />
+    <filePath value="$PROJECT_DIR$/chud-server/src/" />
+    <pty_enabled value="true" />
+    <method v="2" />
+  </configuration>
+</component>

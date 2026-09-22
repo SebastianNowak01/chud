@@ -1,0 +1,74 @@
+import { useState, type FormEvent } from 'react'
+import { DrawablyButton, DrawablyCard, DrawablyInput } from 'drawably/react'
+import { useCreateUser, useUpdateUser } from '@/features/users/users-api'
+import type { User } from '@/features/users/types'
+import { buttonState } from '@/lib/button-state'
+
+interface UserFormProps {
+  // The user being edited; omitted when creating a new one.
+  user?: User
+  onDone: () => void
+}
+
+export function UserForm({ user, onDone }: UserFormProps) {
+  const isEdit = user !== undefined
+  const [username, setUsername] = useState(user?.username ?? '')
+  const [password, setPassword] = useState('')
+
+  const createUser = useCreateUser()
+  const updateUser = useUpdateUser()
+  const mutation = isEdit ? updateUser : createUser
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    const options = { onSuccess: onDone }
+    if (isEdit) {
+      updateUser.mutate({ id: user.id, username, password }, options)
+    } else {
+      createUser.mutate({ username, password }, options)
+    }
+  }
+
+  return (
+    <DrawablyCard className="card">
+      <form className="stack" onSubmit={submit}>
+        <h2>{isEdit ? `Edit ${user.username}` : 'New user'}</h2>
+        <div className="field">
+          <label htmlFor="user-username">Username</label>
+          <DrawablyInput
+            id="user-username"
+            autoComplete="off"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            minLength={3}
+            maxLength={32}
+            required
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="user-password">Password</label>
+          <DrawablyInput
+            id="user-password"
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            minLength={6}
+            maxLength={72}
+            required={!isEdit}
+          />
+          {isEdit && <span className="hint">Leave empty to keep the current password.</span>}
+        </div>
+        {mutation.error && <p className="error">{mutation.error.message}</p>}
+        <div className="row">
+          <DrawablyButton type="submit" variant="solid" state={buttonState(mutation.status)}>
+            {isEdit ? 'Save' : 'Create'}
+          </DrawablyButton>
+          <DrawablyButton type="button" tone="neutral" onClick={onDone}>
+            Cancel
+          </DrawablyButton>
+        </div>
+      </form>
+    </DrawablyCard>
+  )
+}

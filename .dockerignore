@@ -1,0 +1,11 @@
+.git
+.idea
+.task
+**/.DS_Store
+chud-server/bin
+chud-server/src/tmp
+chud-server/src/coverage.out
+chud-server/src/test-output.json
+chud-ui/node_modules
+chud-ui/dist
+chud-server/src/static
