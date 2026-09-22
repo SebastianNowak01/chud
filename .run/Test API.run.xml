@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Test API" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="chud" />
+    <working_directory value="$PROJECT_DIR$/chud-server/src" />
+    <go_parameters value="-v" />
+    <kind value="DIRECTORY" />
+    <package value="github.com/sebnow/chud" />
+    <directory value="$PROJECT_DIR$/chud-server/src" />
+    <filePath value="$PROJECT_DIR$" />
+    <framework value="gotest" />
+    <pattern value="./..." />
+    <method v="2" />
+  </configuration>
+</component>

@@ -1,0 +1,75 @@
+version: '3'
+
+includes:
+  server:
+    taskfile: ./chud-server
+    dir: ./chud-server
+  ui:
+    taskfile: ./chud-ui
+    dir: ./chud-ui
+
+tasks:
+  docker:build:
+    desc: Build the Docker image
+    cmd: |
+      docker build \
+      --build-arg CI_BUILD_NUMBER=$CI_BUILD_NUMBER \
+      --build-arg GIT_COMMIT=$GIT_COMMIT \
+      --build-arg IMAGE_TAG=$IMAGE_TAG \
+      --build-arg VERSION=$VERSION \
+      -t chud .
+
+  docker:up:
+    desc: Start all services using Docker Compose
+    cmds:
+      - docker compose up
+
+  docker:up:no-build:
+    desc: Start without rebuilding
+    cmds:
+      - docker compose up --no-build
+
+  docker:down:
+    desc: Stop all services using Docker Compose
+    cmds:
+      - docker compose down
+
+  db:up:
+    desc: Start the PostgreSQL database in the background
+    cmds:
+      - docker compose up -d --wait db
+
+  db:down:
+    desc: Stop the PostgreSQL database
+    cmds:
+      - docker compose stop db
+
+  db:psql:
+    desc: Open a psql shell in the database
+    interactive: true
+    cmds:
+      - docker compose exec db psql -U chud -d chud
+
+  dev:
+    desc: Run both ui and server in development mode
+    cmds:
+      - task: db:up
+      - task: dev:run
+
+  dev:run:
+    internal: true
+    deps: [ server:dev, ui:dev ]
+
+  build:
+    desc: Build both ui and server
+    cmds:
+      - task: ui:build
+      - task: server:build
+
+  test:
+    desc: Run tests
+    deps: [ server:test ]
+
+  clean:
+    desc: Clean all build artifacts
+    deps: [ ui:clean, server:clean ]

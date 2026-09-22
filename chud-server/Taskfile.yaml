@@ -1,0 +1,65 @@
+version: '3'
+
+vars:
+  APP_NAME: 'chud'
+  SERVER_SRC_DIR: '{{.TASKFILE_DIR}}/src'
+  SERVER_BIN_DIR: '{{.TASKFILE_DIR}}/bin'
+  GOTESTSUM: 'gotest.tools/gotestsum@v1.13.0'
+
+env:
+  API_PORT: '2137'
+  LOG_LEVEL: 'TRACE'
+  JWT_SECRET: 'your_jwt_secret'
+  JWT_EXPIRY_HOURS: '24'
+  ADMIN_USER: 'admin'
+  ADMIN_PASSWORD: '123123'
+  DATABASE_URL: 'postgres://chud:chud@localhost:5432/chud?sslmode=disable'
+
+tasks:
+  build:
+    desc: Build the back-end binary
+    cmds:
+      - echo "Building {{.APP_NAME}}..."
+      - mkdir -p {{.SERVER_BIN_DIR}}
+      - cd src && go build -v -o "{{.SERVER_BIN_DIR}}/{{.APP_NAME}}" main.go
+      - echo "Build complete. Binary at {{.SERVER_BIN_DIR}}/{{.APP_NAME}}."
+    sources:
+      - 'src/**/*.go'
+      - 'src/static/**/*'
+    generates:
+      - '{{.SERVER_BIN_DIR}}/{{.APP_NAME}}'
+
+  run:
+    desc: Run the server binary
+    cmds:
+      - "{{.SERVER_BIN_DIR}}/{{.APP_NAME}}"
+
+  dev:
+    desc: Run the back-end dev server with air for live reload
+    cmds:
+      - cd {{.SERVER_SRC_DIR}} && $(go env GOPATH)/bin/air -build.stop_on_error true
+
+  dev:debug:
+    desc: Run the back-end dev server with air (live reload) + headless delve on :2345
+    cmds:
+      - cd {{.SERVER_SRC_DIR}} && $(go env GOPATH)/bin/air -c .air.toml
+
+  clean:
+    desc: Clean the back-end build artifacts
+    cmds:
+      - rm -r {{.SERVER_BIN_DIR}}/{{.APP_NAME}} || true
+
+  test:
+    desc: Run the back-end tests
+    dir: src
+    cmds:
+      - go run {{.GOTESTSUM}} --format testdox ./...
+
+  coverage:
+    desc: Run the back-end tests with coverage
+    dir: src
+    cmds:
+      - go run {{.GOTESTSUM}} --format testdox --jsonfile test-output.json -- -coverpkg=./... -coverprofile=coverage.out ./...
+    generates:
+      - 'coverage.out'
+      - 'test-output.json'
