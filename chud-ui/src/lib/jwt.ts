@@ -1,5 +1,6 @@
 export interface JwtClaims {
   exp: number
+  user_id: string
   username: string
   is_admin: boolean
 }
@@ -10,6 +11,7 @@ const isJwtClaims = (data: unknown): data is JwtClaims => {
   }
   const obj = data as Record<string, unknown>
   return (
+    typeof obj.user_id === 'string' &&
     typeof obj.username === 'string' &&
     typeof obj.exp === 'number' &&
     typeof obj.is_admin === 'boolean'

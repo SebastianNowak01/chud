@@ -67,8 +67,8 @@ tasks:
       - task: server:build
 
   test:
-    desc: Run tests
-    deps: [ server:test ]
+    desc: Run tests for both ui and server
+    deps: [ server:test, ui:test ]
 
   clean:
     desc: Clean all build artifacts

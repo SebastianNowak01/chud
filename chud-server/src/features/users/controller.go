@@ -33,17 +33,41 @@ func (c *UserAPIController) LoginHandler(w http.ResponseWriter, r *http.Request)
 	httpx.RespondJSON(ctx, w, http.StatusOK, loginResponse)
 }
 
-func (c *UserAPIController) MeHandler(w http.ResponseWriter, r *http.Request) {
+func (c *UserAPIController) GetMeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	claims, ok := auth.ExtractUserOrRespond(ctx, w, r)
 	if !ok {
 		return
 	}
 
-	httpx.RespondJSON(ctx, w, http.StatusOK, map[string]any{
-		"username": claims.Username,
-		"isAdmin":  claims.IsAdmin,
-	})
+	user, err := c.service.GetUser(ctx, claims.UserID)
+	if err != nil {
+		httpx.RespondError(ctx, w, err.Code, err.Err)
+		return
+	}
+
+	httpx.RespondJSON(ctx, w, http.StatusOK, user)
+}
+
+func (c *UserAPIController) UpdateMeHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	claims, ok := auth.ExtractUserOrRespond(ctx, w, r)
+	if !ok {
+		return
+	}
+
+	var payload UpdateMePayload
+	if !httpx.DecodeJSONOrRespond(ctx, w, r, &payload) {
+		return
+	}
+
+	user, err := c.service.UpdateMe(ctx, claims.UserID, payload)
+	if err != nil {
+		httpx.RespondError(ctx, w, err.Code, err.Err)
+		return
+	}
+
+	httpx.RespondJSON(ctx, w, http.StatusOK, user)
 }
 
 func (c *UserAPIController) GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {

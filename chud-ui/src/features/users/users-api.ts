@@ -42,3 +42,9 @@ const useUsersMutation = <TVariables, TData>(mutationFn: (variables: TVariables)
 export const useCreateUser = () => useUsersMutation(createUser)
 export const useUpdateUser = () => useUsersMutation(updateUser)
 export const useDeleteUser = () => useUsersMutation(deleteUser)
+
+// Lookup of every user by id, for showing names and colors next to activity data.
+export const useUsersById = (): Map<string, User> => {
+  const { data } = useUsers()
+  return new Map((data ?? []).map((user) => [user.id, user]))
+}

@@ -32,6 +32,12 @@ tasks:
     generates:
       - "dist/**/*"
 
+  test:
+    desc: Run the front-end tests
+    deps: [install]
+    cmds:
+      - npm test
+
   lint:
     desc: Lint the front-end code
     deps: [install]

@@ -1,8 +1,11 @@
 package apperr
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/sebnow/chud/platform/db"
 )
 
 // ServiceError represents an error that occurred during a service operation.
@@ -62,5 +65,17 @@ func NewForbiddenError(format string, args ...any) *ServiceError {
 	return &ServiceError{
 		Code: http.StatusForbidden,
 		Err:  fmt.Errorf(format, args...),
+	}
+}
+
+// FromDAO maps db sentinel errors to a ServiceError about the given resource (e.g. "user").
+func FromDAO(err error, resource string) *ServiceError {
+	switch {
+	case errors.Is(err, db.ErrNotFound):
+		return NewNotFoundError("%s not found", resource)
+	case errors.Is(err, db.ErrAlreadyExists):
+		return NewConflictError("%s already exists", resource)
+	default:
+		return NewInternalError("%w", err)
 	}
 }

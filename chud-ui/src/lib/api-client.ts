@@ -21,10 +21,12 @@ const errorMessage = async (res: Response): Promise<string> => {
 }
 
 export const apiFetch = async (path: string, options?: RequestInit): Promise<Response> => {
+  // FormData bodies set their own multipart Content-Type.
+  const isJson = typeof options?.body === 'string'
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isJson && { 'Content-Type': 'application/json' }),
       ...options?.headers,
     },
   })

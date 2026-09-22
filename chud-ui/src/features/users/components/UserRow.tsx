@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { DrawablyBadge, DrawablyButton } from 'drawably/react'
+import { UserTag } from '@/components/common/UserTag'
 import { useDeleteUser } from '@/features/users/users-api'
 import type { User } from '@/features/users/types'
 import { buttonState } from '@/lib/button-state'
+import { formatDateTime } from '@/lib/dates'
 
 interface UserRowProps {
   user: User
   onEdit: (user: User) => void
 }
-
-const formatDate = (iso: string) => new Date(iso).toLocaleString()
 
 export function UserRow({ user, onEdit }: UserRowProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -18,9 +18,9 @@ export function UserRow({ user, onEdit }: UserRowProps) {
   return (
     <tr>
       <td>
-        {user.username} {user.isAdmin && <DrawablyBadge>admin</DrawablyBadge>}
+        <UserTag user={user} /> {user.isAdmin && <DrawablyBadge>admin</DrawablyBadge>}
       </td>
-      <td>{formatDate(user.createdAt)}</td>
+      <td>{formatDateTime(user.createdAt)}</td>
       <td className="actions">
         {user.isAdmin ? (
           <span className="hint">Managed via env</span>

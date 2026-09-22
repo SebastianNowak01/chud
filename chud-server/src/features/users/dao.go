@@ -2,14 +2,10 @@ package users
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/sebnow/chud/platform/db"
 )
-
-const userColumns = `id, username, password_hash, is_admin, created_at, updated_at`
 
 type IUserDAO interface {
 	GetAllUsers(ctx context.Context) ([]User, error)
@@ -35,75 +31,60 @@ func NewUserDAO(pool db.Querier) IUserDAO {
 func (r *UserDAO) GetAllUsers(ctx context.Context) ([]User, error) {
 	return db.Wrap(ctx, "GetAllUsers", func() ([]User, error) {
 		users := []User{}
-		err := sqlx.SelectContext(
-			ctx,
-			r.pool,
-			&users,
-			`SELECT `+userColumns+` FROM users ORDER BY created_at, username`,
-		)
+		err := sqlx.SelectContext(ctx, r.pool, &users, `SELECT * FROM users ORDER BY username`)
 		return users, err
 	})
 }
 
 func (r *UserDAO) GetUserByID(ctx context.Context, id string) (*User, error) {
 	return db.Wrap(ctx, "GetUserByID", func() (*User, error) {
-		return r.getOne(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1`, id)
+		return db.GetOne[User](ctx, r.pool, `SELECT * FROM users WHERE id = $1`, id)
 	})
 }
 
 func (r *UserDAO) GetUserByUsername(ctx context.Context, username string) (*User, error) {
 	return db.Wrap(ctx, "GetUserByUsername", func() (*User, error) {
-		return r.getOne(ctx, `SELECT `+userColumns+` FROM users WHERE username = $1`, username)
+		return db.GetOne[User](ctx, r.pool, `SELECT * FROM users WHERE username = $1`, username)
 	})
 }
 
 func (r *UserDAO) InsertUser(ctx context.Context, user *User) (*User, error) {
 	return db.Wrap(ctx, "InsertUser", func() (*User, error) {
-		return r.getOne(
+		return db.GetOne[User](
 			ctx,
-			`INSERT INTO users (id, username, password_hash, is_admin)
-			VALUES ($1, $2, $3, $4)
-			RETURNING `+userColumns,
+			r.pool,
+			`INSERT INTO users (id, username, password_hash, is_admin, color)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING *`,
 			user.ID,
 			user.Username,
 			user.PasswordHash,
 			user.IsAdmin,
+			user.Color,
 		)
 	})
 }
 
 func (r *UserDAO) UpdateUser(ctx context.Context, user *User) (*User, error) {
 	return db.Wrap(ctx, "UpdateUser", func() (*User, error) {
-		return r.getOne(
+		return db.GetOne[User](
 			ctx,
+			r.pool,
 			`UPDATE users
-			SET username = $2, password_hash = $3, is_admin = $4, updated_at = NOW()
+			SET username = $2, password_hash = $3, is_admin = $4, color = $5, updated_at = NOW()
 			WHERE id = $1
-			RETURNING `+userColumns,
+			RETURNING *`,
 			user.ID,
 			user.Username,
 			user.PasswordHash,
 			user.IsAdmin,
+			user.Color,
 		)
 	})
 }
 
 func (r *UserDAO) DeleteUser(ctx context.Context, id string) error {
-	_, err := db.Wrap(ctx, "DeleteUser", func() (struct{}, error) {
-		result, err := r.pool.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, id)
-		if err != nil {
-			return struct{}{}, err
-		}
-		rows, err := result.RowsAffected()
-		if err != nil {
-			return struct{}{}, err
-		}
-		if rows == 0 {
-			return struct{}{}, db.ErrNotFound
-		}
-		return struct{}{}, nil
-	})
-	return err
+	return db.WrapExec(ctx, "DeleteUser", r.pool, `DELETE FROM users WHERE id = $1`, id)
 }
 
 func (r *UserDAO) DemoteAdminsExcept(ctx context.Context, username string) error {
@@ -116,20 +97,4 @@ func (r *UserDAO) DemoteAdminsExcept(ctx context.Context, username string) error
 		return struct{}{}, err
 	})
 	return err
-}
-
-// getOne runs a query returning a single user row, mapping driver errors to db sentinel errors.
-func (r *UserDAO) getOne(ctx context.Context, query string, args ...any) (*User, error) {
-	var user User
-	err := r.pool.QueryRowxContext(ctx, query, args...).StructScan(&user)
-	switch {
-	case err == nil:
-		return &user, nil
-	case errors.Is(err, sql.ErrNoRows):
-		return nil, db.ErrNotFound
-	case db.IsUniqueViolation(err):
-		return nil, db.ErrAlreadyExists
-	default:
-		return nil, err
-	}
 }

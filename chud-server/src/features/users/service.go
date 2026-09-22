@@ -21,10 +21,11 @@ const (
 )
 
 type IUserService interface {
-	GetAllUsers(ctx context.Context) ([]UserResponse, *apperr.ServiceError)
-	GetUser(ctx context.Context, id string) (*UserResponse, *apperr.ServiceError)
-	CreateUser(ctx context.Context, payload CreateUserPayload) (*UserResponse, *apperr.ServiceError)
-	UpdateUser(ctx context.Context, id string, payload UpdateUserPayload) (*UserResponse, *apperr.ServiceError)
+	GetAllUsers(ctx context.Context) ([]User, *apperr.ServiceError)
+	GetUser(ctx context.Context, id string) (*User, *apperr.ServiceError)
+	CreateUser(ctx context.Context, payload CreateUserPayload) (*User, *apperr.ServiceError)
+	UpdateUser(ctx context.Context, id string, payload UpdateUserPayload) (*User, *apperr.ServiceError)
+	UpdateMe(ctx context.Context, id string, payload UpdateMePayload) (*User, *apperr.ServiceError)
 	DeleteUser(ctx context.Context, id string) *apperr.ServiceError
 	Login(ctx context.Context, payload LoginPayload) (*LoginResponse, *apperr.ServiceError)
 	EnsureAdminUserExists(ctx context.Context, username, password string) error
@@ -45,28 +46,19 @@ func NewUserService(deps UserServiceDeps) *UserService {
 	return &UserService{dao: deps.UserDAO, dummyHash: dummyHash}
 }
 
-func (s *UserService) GetAllUsers(ctx context.Context) ([]UserResponse, *apperr.ServiceError) {
+func (s *UserService) GetAllUsers(ctx context.Context) ([]User, *apperr.ServiceError) {
 	users, err := s.dao.GetAllUsers(ctx)
 	if err != nil {
 		return nil, daoError(err)
 	}
-	result := make([]UserResponse, 0, len(users))
-	for _, u := range users {
-		result = append(result, u.ToResponse())
-	}
-	return result, nil
+	return users, nil
 }
 
-func (s *UserService) GetUser(ctx context.Context, id string) (*UserResponse, *apperr.ServiceError) {
-	user, svcErr := s.getUser(ctx, id)
-	if svcErr != nil {
-		return nil, svcErr
-	}
-	response := user.ToResponse()
-	return &response, nil
+func (s *UserService) GetUser(ctx context.Context, id string) (*User, *apperr.ServiceError) {
+	return s.getUser(ctx, id)
 }
 
-func (s *UserService) CreateUser(ctx context.Context, payload CreateUserPayload) (*UserResponse, *apperr.ServiceError) {
+func (s *UserService) CreateUser(ctx context.Context, payload CreateUserPayload) (*User, *apperr.ServiceError) {
 	username := strings.TrimSpace(payload.Username)
 	if svcErr := validateUsername(username); svcErr != nil {
 		return nil, svcErr
@@ -84,21 +76,21 @@ func (s *UserService) CreateUser(ctx context.Context, payload CreateUserPayload)
 		ID:           uuid.NewString(),
 		Username:     username,
 		PasswordHash: string(hash),
+		Color:        randomColor(),
 	})
 	if err != nil {
 		return nil, daoError(err)
 	}
 
 	log.FromContext(ctx).Info().Str("username", username).Msg("User created")
-	response := created.ToResponse()
-	return &response, nil
+	return created, nil
 }
 
 func (s *UserService) UpdateUser(
 	ctx context.Context,
 	id string,
 	payload UpdateUserPayload,
-) (*UserResponse, *apperr.ServiceError) {
+) (*User, *apperr.ServiceError) {
 	user, svcErr := s.getUser(ctx, id)
 	if svcErr != nil {
 		return nil, svcErr
@@ -130,8 +122,27 @@ func (s *UserService) UpdateUser(
 	}
 
 	log.FromContext(ctx).Info().Str("username", username).Msg("User updated")
-	response := updated.ToResponse()
-	return &response, nil
+	return updated, nil
+}
+
+// UpdateMe lets any user change their own profile settings.
+func (s *UserService) UpdateMe(ctx context.Context, id string, payload UpdateMePayload) (*User, *apperr.ServiceError) {
+	user, svcErr := s.getUser(ctx, id)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+
+	color, svcErr := normalizeColor(payload.Color)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+	user.Color = color
+
+	updated, err := s.dao.UpdateUser(ctx, user)
+	if err != nil {
+		return nil, daoError(err)
+	}
+	return updated, nil
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, id string) *apperr.ServiceError {
@@ -163,12 +174,12 @@ func (s *UserService) Login(ctx context.Context, payload LoginPayload) (*LoginRe
 		return nil, apperr.NewUnauthorizedError("invalid username or password")
 	}
 
-	token, err := auth.NewJwt(user.Username, user.IsAdmin)
+	token, err := auth.NewJwt(user.ID, user.Username, user.IsAdmin)
 	if err != nil {
 		return nil, apperr.NewInternalError("failed to create token: %w", err)
 	}
 
-	return &LoginResponse{Token: token, User: user.ToResponse()}, nil
+	return &LoginResponse{Token: token, User: *user}, nil
 }
 
 // EnsureAdminUserExists makes the env user the only admin, creating it or resetting its password,
@@ -200,6 +211,7 @@ func (s *UserService) EnsureAdminUserExists(ctx context.Context, username, passw
 			Username:     username,
 			PasswordHash: string(hash),
 			IsAdmin:      true,
+			Color:        randomColor(),
 		})
 		if err != nil {
 			return err
@@ -247,12 +259,5 @@ func validatePassword(password string) *apperr.ServiceError {
 }
 
 func daoError(err error) *apperr.ServiceError {
-	switch {
-	case errors.Is(err, db.ErrNotFound):
-		return apperr.NewNotFoundError("user not found")
-	case errors.Is(err, db.ErrAlreadyExists):
-		return apperr.NewConflictError("username already taken")
-	default:
-		return apperr.NewInternalError("%w", err)
-	}
+	return apperr.FromDAO(err, "user")
 }
