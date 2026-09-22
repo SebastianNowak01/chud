@@ -21,7 +21,7 @@ func newTestService(t *testing.T) *UserService {
 	return svc
 }
 
-func findAdmin(t *testing.T, svc *UserService) UserResponse {
+func findAdmin(t *testing.T, svc *UserService) User {
 	t.Helper()
 	users, svcErr := svc.GetAllUsers(context.Background())
 	require.Nil(t, svcErr)
@@ -31,7 +31,7 @@ func findAdmin(t *testing.T, svc *UserService) UserResponse {
 		}
 	}
 	t.Fatal("admin not found")
-	return UserResponse{}
+	return User{}
 }
 
 func TestEnsureAdminUserExists(t *testing.T) {
@@ -191,4 +191,19 @@ func TestLogin(t *testing.T) {
 	_, svcErr = svc.Login(ctx, LoginPayload{Username: "nobody", Password: "secret1"})
 	require.NotNil(t, svcErr)
 	assert.Equal(t, http.StatusUnauthorized, svcErr.Code)
+}
+
+func TestUpdateMeColor(t *testing.T) {
+	ctx := context.Background()
+	svc := newTestService(t)
+	admin := findAdmin(t, svc)
+	assert.Regexp(t, `^#[0-9a-f]{6}$`, admin.Color)
+
+	updated, svcErr := svc.UpdateMe(ctx, admin.ID, UpdateMePayload{Color: " #A1B2C3 "})
+	require.Nil(t, svcErr)
+	assert.Equal(t, "#a1b2c3", updated.Color)
+
+	_, svcErr = svc.UpdateMe(ctx, admin.ID, UpdateMePayload{Color: "red"})
+	require.NotNil(t, svcErr)
+	assert.Equal(t, http.StatusBadRequest, svcErr.Code)
 }

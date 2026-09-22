@@ -29,8 +29,8 @@ func DefaultServerConfig() ServerConfig {
 	return ServerConfig{
 		Host:         "0.0.0.0",
 		Port:         os.Getenv(appconfig.APIPort),
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  2 * time.Minute, // media uploads
+		WriteTimeout: 2 * time.Minute,
 	}
 }
 

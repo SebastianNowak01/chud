@@ -13,6 +13,7 @@ import (
 // UserClaims extends standard JWT claims with custom fields.
 type UserClaims struct {
 	jwt.RegisteredClaims
+	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	IsAdmin  bool   `json:"is_admin"`
 }
@@ -40,14 +41,14 @@ func ValidateJwt(token string) (*UserClaims, error) {
 		return nil, fmt.Errorf("invalid JWT token")
 	}
 
-	if claims.Username == "" {
-		return nil, fmt.Errorf("JWT token is missing username claim")
+	if claims.UserID == "" || claims.Username == "" {
+		return nil, fmt.Errorf("JWT token is missing user claims")
 	}
 
 	return claims, nil
 }
 
-func NewJwt(username string, isAdmin bool) (string, error) {
+func NewJwt(userID, username string, isAdmin bool) (string, error) {
 	expiryHours, err := strconv.Atoi(os.Getenv(config.JwtExpiryHours))
 	if err != nil {
 		return "", fmt.Errorf("invalid JwtExpiryHours value: %w", err)
@@ -61,6 +62,7 @@ func NewJwt(username string, isAdmin bool) (string, error) {
 				ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(expiryHours) * time.Hour)),
 				IssuedAt:  jwt.NewNumericDate(now),
 			},
+			UserID:   userID,
 			Username: username,
 			IsAdmin:  isAdmin,
 		},

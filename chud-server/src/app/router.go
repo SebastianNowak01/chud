@@ -4,6 +4,9 @@ import (
 	"embed"
 	"net/http"
 
+	"github.com/sebnow/chud/features/activities"
+	"github.com/sebnow/chud/features/entries"
+	"github.com/sebnow/chud/features/plans"
 	"github.com/sebnow/chud/features/users"
 )
 
@@ -15,6 +18,11 @@ func SetupRouters(
 ) {
 	// Users
 	users.RegisterRoutes(publicRouter, protectedRouter, h.User)
+
+	// Activities, plans and entries
+	activities.RegisterRoutes(protectedRouter, h.Activity)
+	plans.RegisterRoutes(protectedRouter, h.Plan)
+	entries.RegisterRoutes(protectedRouter, h.Entry)
 
 	// Health
 	publicRouter.HandleFunc("GET /api/v1/health", GetHealthCheckHandler)

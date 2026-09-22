@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/sebnow/chud/app"
+	"github.com/sebnow/chud/features/activities"
+	"github.com/sebnow/chud/features/entries"
+	"github.com/sebnow/chud/features/plans"
 	"github.com/sebnow/chud/features/users"
 	"github.com/sebnow/chud/platform/config"
 	"github.com/sebnow/chud/platform/db"
@@ -38,8 +41,25 @@ func main() {
 	defer database.Close()
 	logger.Info().Msg("PostgreSQL connection established")
 
+	userDAO := users.NewUserDAO(database.Querier())
+	activityDAO := activities.NewActivityDAO(database.Querier())
+	planDAO := plans.NewPlanDAO(database.Querier())
+	entryDAO := entries.NewEntryDAO(database)
+
 	userService := users.NewUserService(users.UserServiceDeps{
-		UserDAO: users.NewUserDAO(database.Querier()),
+		UserDAO: userDAO,
+	})
+	activityService := activities.NewActivityService(activities.ActivityServiceDeps{
+		ActivityDAO: activityDAO,
+	})
+	planService := plans.NewPlanService(plans.PlanServiceDeps{
+		PlanDAO:     planDAO,
+		ActivityDAO: activityDAO,
+	})
+	entryService := entries.NewEntryService(entries.EntryServiceDeps{
+		EntryDAO:    entryDAO,
+		ActivityDAO: activityDAO,
+		PlanDAO:     planDAO,
 	})
 
 	err = userService.EnsureAdminUserExists(appCtx, os.Getenv(config.AdminUser), os.Getenv(config.AdminPassword))
@@ -48,7 +68,10 @@ func main() {
 	}
 
 	handlers := app.Handlers{
-		User: users.NewUserAPIController(userService),
+		User:     users.NewUserAPIController(userService),
+		Activity: activities.NewActivityAPIController(activityService),
+		Plan:     plans.NewPlanAPIController(planService),
+		Entry:    entries.NewEntryAPIController(entryService),
 	}
 
 	// Start the server

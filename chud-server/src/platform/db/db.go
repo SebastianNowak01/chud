@@ -23,11 +23,19 @@ var dbSchema string
 var ErrNotFound = errors.New("resource not found")
 var ErrAlreadyExists = errors.New("resource already exists")
 
-const pgUniqueViolation = "23505"
+const (
+	pgUniqueViolation     = "23505"
+	pgForeignKeyViolation = "23503"
+	pgInvalidTextInput    = "22P02" // e.g. a malformed UUID in a WHERE clause
+)
+
+func hasPgCode(err error, code string) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == code
+}
 
 func IsUniqueViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == pgUniqueViolation
+	return hasPgCode(err, pgUniqueViolation)
 }
 
 const (
