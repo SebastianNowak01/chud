@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
 import { DrawablyButton, DrawablyCard, DrawablyInput } from 'drawably/react'
+import { Logo } from '@/components/layout/Logo'
 import { AuthApi } from '@/features/auth/auth-api'
 import { storeToken } from '@/features/auth/lib/token'
 import { buttonState } from '@/lib/button-state'
@@ -28,7 +29,9 @@ export function LoginPage() {
     <div className="login">
       <DrawablyCard className="card">
         <form className="stack" onSubmit={submit}>
-          <h1>chud</h1>
+          <div className="login__logo">
+            <Logo size="large" />
+          </div>
           <div className="field">
             <label htmlFor="username">Username</label>
             <DrawablyInput
