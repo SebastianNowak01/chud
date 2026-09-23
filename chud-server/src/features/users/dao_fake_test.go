@@ -10,7 +10,6 @@ import (
 	"github.com/sebnow/chud/platform/db"
 )
 
-// fakeUserDAO is an in-memory IUserDAO used by service tests.
 type fakeUserDAO struct {
 	mu    sync.Mutex
 	users map[string]User
@@ -113,7 +112,6 @@ func (d *fakeUserDAO) DemoteAdminsExcept(_ context.Context, username string) err
 	return nil
 }
 
-// usernameTaken reports whether a user other than exceptID has the username. Caller must hold the lock.
 func (d *fakeUserDAO) usernameTaken(username, exceptID string) bool {
 	for id, u := range d.users {
 		if id != exceptID && u.Username == username {

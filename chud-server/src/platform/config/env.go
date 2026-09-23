@@ -9,13 +9,14 @@ import (
 
 const (
 	APIPort        = "API_PORT"
-	LogLevel       = "LOG_LEVEL"  // TRACE, DEBUG, INFO, WARN, ERROR
-	LogFormat      = "LOG_FORMAT" // JSON or CONSOLE
+	LogLevel       = "LOG_LEVEL"
+	LogFormat      = "LOG_FORMAT"
 	JwtSecret      = "JWT_SECRET"
 	JwtExpiryHours = "JWT_EXPIRY_HOURS"
 	AdminUser      = "ADMIN_USER"
 	AdminPassword  = "ADMIN_PASSWORD"
 	DatabaseURL    = "DATABASE_URL"
+	AppTimezone    = "APP_TIMEZONE"
 )
 
 func Validate() error {
@@ -24,6 +25,10 @@ func Validate() error {
 
 	if os.Getenv(APIPort) == "" {
 		os.Setenv(APIPort, "2137")
+	}
+
+	if os.Getenv(AppTimezone) == "" {
+		os.Setenv(AppTimezone, "Europe/Warsaw")
 	}
 
 	if os.Getenv(JwtExpiryHours) == "" {

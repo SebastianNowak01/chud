@@ -3,22 +3,28 @@ import type { CardSize } from '@/components/ui/Card'
 import { useActivities } from '@/features/activities/activities-api'
 import { useEntriesInRange } from '@/features/entries/entries-api'
 import { useUsersById } from '@/features/users/users-api'
-import { useGridRange } from '@/lib/use-grid-range'
+import type { GridLayout, GridRange } from '@/lib/contributions'
 
 // Everyone's entries in every activity, each day striped in the colors of the people active on it.
-export function GroupActivityGrid({ size }: { size?: CardSize }) {
-  const { range, setRange, layout } = useGridRange('grid:group')
-  const entries = useEntriesInRange(layout.from, layout.to)
+interface GroupActivityGridProps {
+  range: GridRange
+  onRangeChange: (range: GridRange) => void
+  layout: GridLayout
+  size?: CardSize
+}
+
+export function GroupActivityGrid({ range, onRangeChange, layout, size }: GroupActivityGridProps) {
+  const entries = useEntriesInRange(layout.firstDay, layout.lastDay)
   const activities = useActivities()
   const usersById = useUsersById()
   const activitiesById = new Map((activities.data ?? []).map((a) => [a.id, a]))
 
   return (
     <ContributionGrid
-      title="Group activity"
+      title="Aktywność grupy"
       layout={layout}
       range={range}
-      onRangeChange={setRange}
+      onRangeChange={onRangeChange}
       entries={entries.data}
       error={entries.error}
       coloring={{ kind: 'single', color: 'var(--color-ink)' }}

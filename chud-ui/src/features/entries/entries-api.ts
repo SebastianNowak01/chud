@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_URL, authFetch } from '@/lib/api-client'
 import { activitiesKey } from '@/features/activities/activities-api'
 import type { Entry, EntryPayload, Media } from '@/features/entries/types'
+import { statsKey } from '@/features/stats/stats-api'
 
 const getEntries = async (activityId: string): Promise<Entry[]> => {
   const res = await authFetch(`/activities/${encodeURIComponent(activityId)}/entries`)
@@ -29,16 +30,20 @@ const getEntryMedia = async (entryId: string): Promise<Media[]> => {
   return (await res.json()) as Media[]
 }
 
-const rangeQuery = (from: Date, to: Date) =>
-  `from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`
+const rangeQuery = (from: string, to: string) => `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
 
-const getEntriesInRange = async (from: Date, to: Date): Promise<Entry[]> => {
+const getEntriesInRange = async (from: string, to: string): Promise<Entry[]> => {
   const res = await authFetch(`/entries?${rangeQuery(from, to)}`)
   return (await res.json()) as Entry[]
 }
 
-const getMyEntriesInRange = async (from: Date, to: Date): Promise<Entry[]> => {
+const getMyEntriesInRange = async (from: string, to: string): Promise<Entry[]> => {
   const res = await authFetch(`/me/entries?${rangeQuery(from, to)}`)
+  return (await res.json()) as Entry[]
+}
+
+const getUserEntriesInRange = async (userId: string, from: string, to: string): Promise<Entry[]> => {
+  const res = await authFetch(`/users/${encodeURIComponent(userId)}/entries?${rangeQuery(from, to)}`)
   return (await res.json()) as Entry[]
 }
 
@@ -51,17 +56,21 @@ export const useEntries = (activityId: string) =>
 export const useEntryMedia = (entryId: string) =>
   useQuery({ queryKey: ['entries', entryId, 'media'], queryFn: () => getEntryMedia(entryId) })
 
-// Everyone's entries in [from, to).
-export const useEntriesInRange = (from: Date, to: Date) =>
+export const useEntriesInRange = (from: string, to: string) =>
   useQuery({
-    queryKey: ['entries', 'range', from.toISOString(), to.toISOString()],
+    queryKey: ['entries', 'range', from, to],
     queryFn: () => getEntriesInRange(from, to),
   })
 
-// The current user's entries in [from, to).
-export const useMyEntriesInRange = (from: Date, to: Date) =>
+export const useUserEntriesInRange = (userId: string, from: string, to: string) =>
   useQuery({
-    queryKey: ['me', 'entries', from.toISOString(), to.toISOString()],
+    queryKey: ['entries', 'range', 'user', userId, from, to],
+    queryFn: () => getUserEntriesInRange(userId, from, to),
+  })
+
+export const useMyEntriesInRange = (from: string, to: string) =>
+  useQuery({
+    queryKey: ['me', 'entries', from, to],
     queryFn: () => getMyEntriesInRange(from, to),
   })
 
@@ -75,6 +84,7 @@ export const useCreateEntry = (activityId: string) => {
         queryClient.invalidateQueries({ queryKey: [...activitiesKey, activityId] }),
         queryClient.invalidateQueries({ queryKey: ['entries', 'range'] }),
         queryClient.invalidateQueries({ queryKey: ['me', 'entries'] }),
+        queryClient.invalidateQueries({ queryKey: statsKey }),
       ]),
   })
 }

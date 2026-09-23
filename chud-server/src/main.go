@@ -7,12 +7,15 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/sebnow/chud/app"
 	"github.com/sebnow/chud/features/activities"
 	"github.com/sebnow/chud/features/entries"
 	"github.com/sebnow/chud/features/plans"
+	"github.com/sebnow/chud/features/stats"
 	"github.com/sebnow/chud/features/users"
+	"github.com/sebnow/chud/platform/clock"
 	"github.com/sebnow/chud/platform/config"
 	"github.com/sebnow/chud/platform/db"
 	"github.com/sebnow/chud/platform/log"
@@ -34,6 +37,10 @@ func main() {
 	}
 	logger.Info().Msg("Environment variable validation OK")
 
+	if err := clock.Init(os.Getenv(config.AppTimezone)); err != nil {
+		logger.Fatal().Err(err).Msg("Invalid APP_TIMEZONE")
+	}
+
 	database, err := db.NewFromEnv(appCtx)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to initialize PostgreSQL connection")
@@ -44,7 +51,7 @@ func main() {
 	userDAO := users.NewUserDAO(database.Querier())
 	activityDAO := activities.NewActivityDAO(database.Querier())
 	planDAO := plans.NewPlanDAO(database.Querier())
-	entryDAO := entries.NewEntryDAO(database)
+	statsDAO := stats.NewStatsDAO(database.Querier())
 
 	userService := users.NewUserService(users.UserServiceDeps{
 		UserDAO: userDAO,
@@ -57,9 +64,13 @@ func main() {
 		ActivityDAO: activityDAO,
 	})
 	entryService := entries.NewEntryService(entries.EntryServiceDeps{
-		EntryDAO:    entryDAO,
+		DB:          database,
 		ActivityDAO: activityDAO,
 		PlanDAO:     planDAO,
+	})
+	statsService := stats.NewStatsService(stats.StatsServiceDeps{
+		StatsDAO: statsDAO,
+		UserDAO:  userDAO,
 	})
 
 	err = userService.EnsureAdminUserExists(appCtx, os.Getenv(config.AdminUser), os.Getenv(config.AdminPassword))
@@ -72,12 +83,12 @@ func main() {
 		Activity: activities.NewActivityAPIController(activityService),
 		Plan:     plans.NewPlanAPIController(planService),
 		Entry:    entries.NewEntryAPIController(entryService),
+		Stats:    stats.NewStatsAPIController(statsService),
 	}
 
-	// Start the server
 	serverConfig := app.DefaultServerConfig()
 	logger.Info().Msg("Starting API server...")
-	server, done, err := app.StartServer(appCtx, serverConfig, staticFiles, handlers)
+	server, err := app.StartServer(appCtx, serverConfig, staticFiles, handlers)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to start API server")
 		os.Exit(1)
@@ -96,7 +107,6 @@ func main() {
 	} else {
 		logger.Info().Msg("API server stopped gracefully")
 	}
-	close(done)
 
 	logger.Info().Msg("All processes terminated successfully")
 }

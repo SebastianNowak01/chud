@@ -35,7 +35,7 @@ export function LoginPage() {
           <div className="flex justify-center">
             <Logo size="large" />
           </div>
-          <Field label="Username" htmlFor="username">
+          <Field label="Nazwa użytkownika" htmlFor="username">
             <DrawablyInput
               id="username"
               autoComplete="username"
@@ -44,7 +44,7 @@ export function LoginPage() {
               required
             />
           </Field>
-          <Field label="Password" htmlFor="password">
+          <Field label="Hasło" htmlFor="password">
             <DrawablyInput
               id="password"
               type="password"
@@ -56,7 +56,7 @@ export function LoginPage() {
           </Field>
           {login.error && <ErrorText>{login.error.message}</ErrorText>}
           <DrawablyButton type="submit" variant="solid" state={buttonState(login.status)}>
-            Log in
+            Zaloguj się
           </DrawablyButton>
         </form>
       </Card>

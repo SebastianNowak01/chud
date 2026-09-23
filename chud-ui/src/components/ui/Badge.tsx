@@ -6,9 +6,12 @@ const TONE = {
   done: '[--drawably-stroke:var(--color-done)]',
   excused: '[--drawably-stroke:var(--color-excused)]',
   accent: '[--drawably-stroke:var(--color-accent)]',
+  danger: '[--drawably-stroke:var(--color-danger)]',
 }
 
-type BadgeProps = ComponentProps<typeof DrawablyBadge> & { tone?: keyof typeof TONE }
+export type BadgeTone = keyof typeof TONE
+
+type BadgeProps = ComponentProps<typeof DrawablyBadge> & { tone?: BadgeTone }
 
 export function Badge({ tone = 'inherit', className, ...rest }: BadgeProps) {
   return (

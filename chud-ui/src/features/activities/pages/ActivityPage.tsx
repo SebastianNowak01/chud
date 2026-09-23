@@ -34,7 +34,7 @@ export function ActivityPage() {
     return (
       <div className="flex flex-col gap-4">
         <ErrorText>{activity.error.message}</ErrorText>
-        <Link to="/activities">Back to activities</Link>
+        <Link to="/activities">Wróć do pulpitu</Link>
       </div>
     )
   }
@@ -57,16 +57,16 @@ export function ActivityPage() {
         {form.kind === 'none' && (
           <div className="flex flex-wrap items-center gap-3">
             <DrawablyButton variant="solid" onClick={() => openEntryForm()}>
-              Log entry
+              Dodaj wpis
             </DrawablyButton>
-            <DrawablyButton onClick={() => setForm({ kind: 'plan' })}>New plan</DrawablyButton>
+            <DrawablyButton onClick={() => setForm({ kind: 'plan' })}>Nowy plan</DrawablyButton>
           </div>
         )}
       </div>
 
       {members.data && members.data.length > 0 && (
         <div className="flex flex-wrap items-center gap-3">
-          <Hint as="span">Members:</Hint>
+          <Hint as="span">Uczestnicy:</Hint>
           {members.data.map((member) => (
             <UserTag key={member.id} user={member} />
           ))}
@@ -87,7 +87,7 @@ export function ActivityPage() {
 
       {plans.data && plans.data.length > 0 && (
         <section className="flex flex-col gap-4">
-          <h3>Plans</h3>
+          <h3>Plany</h3>
           {plans.data.map((plan) => (
             <PlanCard
               key={plan.id}
@@ -102,10 +102,10 @@ export function ActivityPage() {
       )}
 
       <section className="flex flex-col gap-4">
-        <h3>Latest entries</h3>
-        {entries.isPending && <Hint>Loading…</Hint>}
+        <h3>Ostatnie wpisy</h3>
+        {entries.isPending && <Hint>Ładowanie…</Hint>}
         {entries.error && <ErrorText>{entries.error.message}</ErrorText>}
-        {entries.data?.length === 0 && <Hint>Nothing logged yet.</Hint>}
+        {entries.data?.length === 0 && <Hint>Nic jeszcze nie zapisano.</Hint>}
         <ul className="m-0 flex list-none flex-col p-0">
           {entries.data?.map((entry) => (
             <EntryItem key={entry.id} entry={entry} user={usersById.get(entry.userId)} />

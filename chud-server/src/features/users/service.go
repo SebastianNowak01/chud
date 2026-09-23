@@ -17,7 +17,7 @@ const (
 	minUsernameLength = 3
 	maxUsernameLength = 32
 	minPasswordLength = 6
-	maxPasswordLength = 72 // bcrypt limit
+	maxPasswordLength = 72
 )
 
 type IUserService interface {
@@ -36,8 +36,7 @@ type UserServiceDeps struct {
 }
 
 type UserService struct {
-	dao IUserDAO
-	// dummyHash is compared against when a login username does not exist, so response time does not reveal it.
+	dao       IUserDAO
 	dummyHash []byte
 }
 
@@ -96,7 +95,7 @@ func (s *UserService) UpdateUser(
 		return nil, svcErr
 	}
 	if user.IsAdmin {
-		return nil, apperr.NewForbiddenError("the admin user is managed through environment variables")
+		return nil, apperr.NewForbiddenError("administrator jest zarządzany przez zmienne środowiskowe")
 	}
 
 	username := strings.TrimSpace(payload.Username)
@@ -125,7 +124,6 @@ func (s *UserService) UpdateUser(
 	return updated, nil
 }
 
-// UpdateMe lets any user change their own profile settings.
 func (s *UserService) UpdateMe(ctx context.Context, id string, payload UpdateMePayload) (*User, *apperr.ServiceError) {
 	user, svcErr := s.getUser(ctx, id)
 	if svcErr != nil {
@@ -151,7 +149,7 @@ func (s *UserService) DeleteUser(ctx context.Context, id string) *apperr.Service
 		return svcErr
 	}
 	if user.IsAdmin {
-		return apperr.NewForbiddenError("the admin user cannot be deleted")
+		return apperr.NewForbiddenError("nie można usunąć administratora")
 	}
 	if err := s.dao.DeleteUser(ctx, id); err != nil {
 		return daoError(err)
@@ -168,10 +166,10 @@ func (s *UserService) Login(ctx context.Context, payload LoginPayload) (*LoginRe
 			return nil, daoError(err)
 		}
 		_ = bcrypt.CompareHashAndPassword(s.dummyHash, []byte(payload.Password))
-		return nil, apperr.NewUnauthorizedError("invalid username or password")
+		return nil, apperr.NewUnauthorizedError("nieprawidłowa nazwa użytkownika lub hasło")
 	}
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(payload.Password)) != nil {
-		return nil, apperr.NewUnauthorizedError("invalid username or password")
+		return nil, apperr.NewUnauthorizedError("nieprawidłowa nazwa użytkownika lub hasło")
 	}
 
 	token, err := auth.NewJwt(user.ID, user.Username, user.IsAdmin)
@@ -182,8 +180,6 @@ func (s *UserService) Login(ctx context.Context, payload LoginPayload) (*LoginRe
 	return &LoginResponse{Token: token, User: *user}, nil
 }
 
-// EnsureAdminUserExists makes the env user the only admin, creating it or resetting its password,
-// so the environment always wins.
 func (s *UserService) EnsureAdminUserExists(ctx context.Context, username, password string) error {
 	logger := log.FromContext(ctx)
 
@@ -224,10 +220,9 @@ func (s *UserService) EnsureAdminUserExists(ctx context.Context, username, passw
 	return nil
 }
 
-// getUser loads a user by ID, treating malformed IDs as not found.
 func (s *UserService) getUser(ctx context.Context, id string) (*User, *apperr.ServiceError) {
 	if uuid.Validate(id) != nil {
-		return nil, apperr.NewNotFoundError("user not found")
+		return nil, apperr.NewNotFoundError("nie znaleziono: użytkownik")
 	}
 	user, err := s.dao.GetUserByID(ctx, id)
 	if err != nil {
@@ -239,7 +234,7 @@ func (s *UserService) getUser(ctx context.Context, id string) (*User, *apperr.Se
 func validateUsername(username string) *apperr.ServiceError {
 	if len(username) < minUsernameLength || len(username) > maxUsernameLength {
 		return apperr.NewBadRequestError(
-			"username must be between %d and %d characters",
+			"nazwa użytkownika musi mieć od %d do %d znaków",
 			minUsernameLength,
 			maxUsernameLength,
 		)
@@ -250,7 +245,7 @@ func validateUsername(username string) *apperr.ServiceError {
 func validatePassword(password string) *apperr.ServiceError {
 	if len(password) < minPasswordLength || len(password) > maxPasswordLength {
 		return apperr.NewBadRequestError(
-			"password must be between %d and %d characters",
+			"hasło musi mieć od %d do %d znaków",
 			minPasswordLength,
 			maxPasswordLength,
 		)

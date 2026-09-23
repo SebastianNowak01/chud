@@ -36,8 +36,8 @@ export function UserForm({ user, onDone }: UserFormProps) {
   return (
     <Card>
       <form className="flex flex-col gap-4" onSubmit={submit}>
-        <h2>{isEdit ? `Edit ${user.username}` : 'New user'}</h2>
-        <Field label="Username" htmlFor="user-username">
+        <h2>{isEdit ? `Edytuj: ${user.username}` : 'Nowy użytkownik'}</h2>
+        <Field label="Nazwa użytkownika" htmlFor="user-username">
           <DrawablyInput
             id="user-username"
             autoComplete="off"
@@ -48,7 +48,7 @@ export function UserForm({ user, onDone }: UserFormProps) {
             required
           />
         </Field>
-        <Field label="Password" htmlFor="user-password">
+        <Field label="Hasło" htmlFor="user-password">
           <DrawablyInput
             id="user-password"
             type="password"
@@ -59,15 +59,15 @@ export function UserForm({ user, onDone }: UserFormProps) {
             maxLength={72}
             required={!isEdit}
           />
-          {isEdit && <Hint as="span">Leave empty to keep the current password.</Hint>}
+          {isEdit && <Hint as="span">Zostaw puste, aby nie zmieniać hasła.</Hint>}
         </Field>
         {mutation.error && <ErrorText>{mutation.error.message}</ErrorText>}
         <div className="flex flex-wrap items-center gap-3">
           <DrawablyButton type="submit" variant="solid" state={buttonState(mutation.status)}>
-            {isEdit ? 'Save' : 'Create'}
+            {isEdit ? 'Zapisz' : 'Utwórz'}
           </DrawablyButton>
           <DrawablyButton type="button" tone="neutral" onClick={onDone}>
-            Cancel
+            Anuluj
           </DrawablyButton>
         </div>
       </form>

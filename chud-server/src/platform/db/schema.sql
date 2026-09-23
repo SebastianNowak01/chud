@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS entries (
     id            UUID PRIMARY KEY,
     activity_id   UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
     user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    plan_id       UUID REFERENCES plans(id) ON DELETE SET NULL,
+    plan_id       UUID,
     scheduled_for DATE,
     excused       BOOLEAN NOT NULL DEFAULT FALSE,
     description   TEXT NOT NULL DEFAULT '',
@@ -54,3 +54,38 @@ CREATE TABLE IF NOT EXISTS media (
     content_type TEXT NOT NULL,
     data         BYTEA NOT NULL
 );
+
+ALTER TABLE entries DROP CONSTRAINT IF EXISTS entries_plan_id_fkey;
+
+CREATE OR REPLACE FUNCTION pg_temp.add_constraint(tbl TEXT, name TEXT, definition TEXT) RETURNS VOID AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = name) THEN
+        EXECUTE format('ALTER TABLE %I ADD CONSTRAINT %I %s', tbl, name, definition);
+    END IF;
+END
+$$ LANGUAGE plpgsql;
+
+SELECT pg_temp.add_constraint('plans', 'plans_has_day',
+    'CHECK (monday OR tuesday OR wednesday OR thursday OR friday OR saturday OR sunday)');
+SELECT pg_temp.add_constraint('plans', 'plans_dates',
+    'CHECK (ends_on IS NULL OR ends_on >= starts_on)');
+SELECT pg_temp.add_constraint('plans', 'plans_title',
+    $c$CHECK (btrim(title) <> '')$c$);
+SELECT pg_temp.add_constraint('plans', 'plans_identity',
+    'UNIQUE (id, activity_id, user_id)');
+
+SELECT pg_temp.add_constraint('entries', 'entries_plan',
+    'FOREIGN KEY (plan_id, activity_id, user_id) REFERENCES plans (id, activity_id, user_id)');
+SELECT pg_temp.add_constraint('entries', 'entries_planned_day',
+    'CHECK ((plan_id IS NULL) = (scheduled_for IS NULL))');
+SELECT pg_temp.add_constraint('entries', 'entries_excuse_planned',
+    'CHECK (NOT excused OR plan_id IS NOT NULL)');
+SELECT pg_temp.add_constraint('entries', 'entries_excuse_reason',
+    $c$CHECK (NOT excused OR btrim(description) <> '')$c$);
+
+CREATE INDEX IF NOT EXISTS entries_occurred_at_idx ON entries (occurred_at);
+CREATE INDEX IF NOT EXISTS entries_user_occurred_at_idx ON entries (user_id, occurred_at);
+CREATE INDEX IF NOT EXISTS entries_activity_occurred_at_idx ON entries (activity_id, occurred_at);
+CREATE INDEX IF NOT EXISTS entries_scheduled_for_idx ON entries (scheduled_for) WHERE plan_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS plans_activity_idx ON plans (activity_id);
+CREATE INDEX IF NOT EXISTS media_entry_idx ON media (entry_id);

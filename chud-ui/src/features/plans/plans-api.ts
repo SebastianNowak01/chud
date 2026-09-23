@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { authFetch } from '@/lib/api-client'
 import { activitiesKey } from '@/features/activities/activities-api'
-import type { Plan, PlanPayload } from '@/features/plans/types'
+import type { Plan, PlanPayload, PlanUpdatePayload } from '@/features/plans/types'
+import { statsKey } from '@/features/stats/stats-api'
 
 const getPlans = async (activityId: string): Promise<Plan[]> => {
   const res = await authFetch(`/activities/${encodeURIComponent(activityId)}/plans`)
@@ -16,6 +17,14 @@ const createPlan = async (activityId: string, payload: PlanPayload): Promise<Pla
   return (await res.json()) as Plan
 }
 
+const updatePlan = async (planId: string, payload: PlanUpdatePayload): Promise<Plan> => {
+  const res = await authFetch(`/plans/${encodeURIComponent(planId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return (await res.json()) as Plan
+}
+
 const deletePlan = async (planId: string): Promise<void> => {
   await authFetch(`/plans/${encodeURIComponent(planId)}`, { method: 'DELETE' })
 }
@@ -25,18 +34,24 @@ const plansKey = (activityId: string) => [...activitiesKey, activityId, 'plans']
 export const usePlans = (activityId: string) =>
   useQuery({ queryKey: plansKey(activityId), queryFn: () => getPlans(activityId) })
 
-export const useCreatePlan = (activityId: string) => {
+const usePlanMutation = <T,>(activityId: string, mutationFn: (variables: T) => Promise<unknown>) => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: PlanPayload) => createPlan(activityId, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: plansKey(activityId) }),
+    mutationFn,
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: plansKey(activityId) }),
+        queryClient.invalidateQueries({ queryKey: statsKey }),
+      ]),
   })
 }
 
-export const useDeletePlan = (activityId: string) => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: deletePlan,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: plansKey(activityId) }),
-  })
-}
+export const useCreatePlan = (activityId: string) =>
+  usePlanMutation(activityId, (payload: PlanPayload) => createPlan(activityId, payload))
+
+export const useUpdatePlan = (activityId: string) =>
+  usePlanMutation(activityId, ({ planId, payload }: { planId: string; payload: PlanUpdatePayload }) =>
+    updatePlan(planId, payload),
+  )
+
+export const useDeletePlan = (activityId: string) => usePlanMutation(activityId, deletePlan)

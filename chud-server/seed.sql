@@ -58,9 +58,9 @@ SELECT gen_random_uuid(), p.activity_id, p.user_id, p.id, d::date, r >= 0.75,
             THEN (ARRAY['Chory', 'Wyjazd służbowy', 'Kontuzja kolana', 'Urodziny babci'])[1 + floor(random() * 4)::int]
             ELSE pg_temp.seed_description(p.activity)
        END,
-       d + time '07:00' + random() * interval '12 hours'
+       (d::date + time '07:00' + random() * interval '12 hours') AT TIME ZONE 'Europe/Warsaw'
 FROM seed_plans p
-CROSS JOIN generate_series(CURRENT_DATE - 120, CURRENT_DATE, interval '1 day') AS d
+CROSS JOIN generate_series(CURRENT_DATE - 120, CURRENT_DATE - 1, interval '1 day') AS d
 CROSS JOIN LATERAL (SELECT random() AS r WHERE d IS NOT NULL) AS roll
 WHERE r < 0.85
   AND (ARRAY[p.sunday, p.monday, p.tuesday, p.wednesday, p.thursday, p.friday, p.saturday])[extract(dow FROM d)::int + 1];
@@ -68,7 +68,7 @@ WHERE r < 0.85
 INSERT INTO entries (id, activity_id, user_id, description, occurred_at)
 SELECT gen_random_uuid(), a.id, u.id,
        pg_temp.seed_description(a.name),
-       d + time '06:00' + random() * interval '16 hours'
+       (d::date + time '06:00' + random() * interval '16 hours') AT TIME ZONE 'Europe/Warsaw'
 FROM (VALUES
     ('Ala',  'Bieganie',  0.15),
     ('Ala',  'Czytanie',  0.08),

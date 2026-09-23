@@ -44,7 +44,6 @@ func TestEnsureAdminUserExists(t *testing.T) {
 	assert.Equal(t, "admin", users[0].Username)
 	assert.True(t, users[0].IsAdmin)
 
-	// Env always wins: re-running resets the password without duplicating the user.
 	require.NoError(t, svc.EnsureAdminUserExists(ctx, "admin", "new-pass"))
 	users, svcErr = svc.GetAllUsers(ctx)
 	require.Nil(t, svcErr)
@@ -60,7 +59,6 @@ func TestEnsureAdminUserExistsKeepsSingleAdmin(t *testing.T) {
 	ctx := context.Background()
 	svc := newTestService(t)
 
-	// ADMIN_USER changed between restarts: the old admin becomes a regular user.
 	require.NoError(t, svc.EnsureAdminUserExists(ctx, "root", "root-pass"))
 
 	users, svcErr := svc.GetAllUsers(ctx)
@@ -100,7 +98,6 @@ func TestUserCRUD(t *testing.T) {
 	require.Nil(t, svcErr)
 	assert.Equal(t, "alicja", updated.Username)
 
-	// Empty password on update keeps the old one.
 	_, svcErr = svc.Login(ctx, LoginPayload{Username: "alicja", Password: "secret1"})
 	require.Nil(t, svcErr)
 

@@ -26,27 +26,27 @@ export function UserRow({ user, onEdit }: UserRowProps) {
       <td>{formatDateTime(user.createdAt)}</td>
       <td className="text-right">
         {user.isAdmin ? (
-          <Hint as="span">Managed via env</Hint>
+          <Hint as="span">Zarządzany przez env</Hint>
         ) : confirmingDelete ? (
           <div className="flex flex-wrap items-center gap-3 justify-end">
             {deleteUser.error && <ErrorText as="span">{deleteUser.error.message}</ErrorText>}
-            <span>Delete?</span>
+            <span>Usunąć?</span>
             <DrawablyButton
               tone="danger"
               state={buttonState(deleteUser.status)}
               onClick={() => deleteUser.mutate(user.id)}
             >
-              Yes
+              Tak
             </DrawablyButton>
             <DrawablyButton tone="neutral" onClick={() => setConfirmingDelete(false)}>
-              No
+              Nie
             </DrawablyButton>
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3 justify-end">
-            <DrawablyButton onClick={() => onEdit(user)}>Edit</DrawablyButton>
+            <DrawablyButton onClick={() => onEdit(user)}>Edytuj</DrawablyButton>
             <DrawablyButton tone="danger" onClick={() => setConfirmingDelete(true)}>
-              Delete
+              Usuń
             </DrawablyButton>
           </div>
         )}

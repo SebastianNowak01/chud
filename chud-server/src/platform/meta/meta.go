@@ -1,4 +1,3 @@
-// Package meta contains variables with build-time metadata
 package meta
 
 var (

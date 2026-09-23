@@ -7,29 +7,16 @@ import { ErrorText } from '@/components/ui/ErrorText'
 import { Hint } from '@/components/ui/Hint'
 import type { PlannedDay } from '@/features/entries/components/EntryForm'
 import type { Entry } from '@/features/entries/types'
-import { planOccurrences, type OccurrenceStatus } from '@/features/plans/occurrences'
-import { useDeletePlan } from '@/features/plans/plans-api'
+import { useDeletePlan, useUpdatePlan } from '@/features/plans/plans-api'
 import { WEEKDAYS, type Plan } from '@/features/plans/types'
+import { useOccurrences } from '@/features/stats/stats-api'
+import { STATUS_LABEL, STATUS_TONE } from '@/features/stats/status'
 import type { User } from '@/features/users/types'
 import { buttonState } from '@/lib/button-state'
-import { addDays, formatDate } from '@/lib/dates'
+import { addDays, formatDate, toDateString } from '@/lib/dates'
 
 const PAST_DAYS = 14
 const FUTURE_DAYS = 7
-
-const STATUS_LABEL: Record<OccurrenceStatus, string> = {
-  done: '✓ done',
-  excused: 'excused',
-  missed: '✗ missed',
-  todo: 'to do',
-}
-
-const STATUS_STROKE: Record<OccurrenceStatus, string> = {
-  done: '[--drawably-stroke:var(--color-done)]',
-  excused: '[--drawably-stroke:var(--color-excused)]',
-  missed: '[--drawably-stroke:var(--color-danger)]',
-  todo: '',
-}
 
 interface PlanCardProps {
   plan: Plan
@@ -40,12 +27,30 @@ interface PlanCardProps {
 }
 
 export function PlanCard({ plan, owner, entries, isMine, onResolve }: PlanCardProps) {
-  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const deletePlan = useDeletePlan(plan.activityId)
+  const updatePlan = useUpdatePlan(plan.activityId)
 
-  const today = new Date()
-  const occurrences = planOccurrences(plan, entries, addDays(today, -PAST_DAYS), addDays(today, FUTURE_DAYS))
+  const now = new Date()
+  const today = toDateString(now)
+  const occurrences = useOccurrences(toDateString(addDays(now, -PAST_DAYS)), toDateString(addDays(now, FUTURE_DAYS)))
+  const planDays = (occurrences.data ?? []).filter((o) => o.planId === plan.id)
   const days = WEEKDAYS.filter(({ key }) => plan[key]).map(({ label }) => label)
+
+  const { startsOn, endsOn } = plan
+  const notStarted = startsOn >= today
+  const ended = endsOn !== null && endsOn < today
+  const todayResolved = planDays.some((o) => o.date === today && o.entryId !== null)
+  const endDate = todayResolved ? today : toDateString(addDays(now, -1))
+
+  const confirm = () => {
+    if (notStarted) {
+      deletePlan.mutate(plan.id)
+    } else {
+      updatePlan.mutate({ planId: plan.id, payload: { endsOn: endDate } }, { onSuccess: () => setConfirming(false) })
+    }
+  }
+  const mutation = notStarted ? deletePlan : updatePlan
 
   return (
     <Card className="flex flex-col gap-4">
@@ -55,54 +60,63 @@ export function PlanCard({ plan, owner, entries, isMine, onResolve }: PlanCardPr
           <div className="flex flex-wrap items-center gap-3">
             <UserTag user={owner} />
             <Hint as="span">{days.join(', ')}</Hint>
+            <Hint as="span">
+              od {formatDate(startsOn)}
+              {endsOn && ` do ${formatDate(endsOn)}`}
+            </Hint>
           </div>
         </div>
         {isMine &&
-          (confirmingDelete ? (
+          !ended &&
+          (confirming ? (
             <div className="flex flex-wrap items-center gap-3">
-              <span>Delete plan?</span>
-              <DrawablyButton
-                tone="danger"
-                state={buttonState(deletePlan.status)}
-                onClick={() => deletePlan.mutate(plan.id)}
-              >
-                Yes
+              <span>{notStarted ? 'Usunąć plan?' : 'Zakończyć plan?'}</span>
+              <DrawablyButton tone="danger" state={buttonState(mutation.status)} onClick={confirm}>
+                Tak
               </DrawablyButton>
-              <DrawablyButton tone="neutral" onClick={() => setConfirmingDelete(false)}>
-                No
+              <DrawablyButton tone="neutral" onClick={() => setConfirming(false)}>
+                Nie
               </DrawablyButton>
             </div>
           ) : (
-            <DrawablyButton tone="danger" onClick={() => setConfirmingDelete(true)}>
-              Delete
+            <DrawablyButton tone="danger" onClick={() => setConfirming(true)}>
+              {notStarted ? 'Usuń' : 'Zakończ plan'}
             </DrawablyButton>
           ))}
       </div>
 
-      {occurrences.length === 0 && <Hint>No planned days in the last two weeks or the next week.</Hint>}
+      {occurrences.error && <ErrorText>{occurrences.error.message}</ErrorText>}
+      {occurrences.data && planDays.length === 0 && (
+        <Hint>Brak zaplanowanych dni w ostatnich dwóch tygodniach i w najbliższym tygodniu.</Hint>
+      )}
       <ul className="m-0 flex list-none flex-col p-0">
-        {occurrences.map((o) => (
-          <li key={o.date} className={`flex flex-wrap items-center gap-3 py-1.5 ${STATUS_STROKE[o.status]}`}>
-            <span className="min-w-[110px]">{formatDate(o.date)}</span>
-            <Badge>{STATUS_LABEL[o.status]}</Badge>
-            {o.entry?.description && <Hint as="span">{o.entry.description}</Hint>}
-            {isMine && !o.entry && (
-              <span className="flex flex-wrap items-center gap-3 w-full sm:ml-auto sm:w-auto">
-                <DrawablyButton onClick={() => onResolve({ planId: plan.id, scheduledFor: o.date, excused: false })}>
-                  Done
-                </DrawablyButton>
-                <DrawablyButton
-                  tone="neutral"
-                  onClick={() => onResolve({ planId: plan.id, scheduledFor: o.date, excused: true })}
-                >
-                  Excuse
-                </DrawablyButton>
-              </span>
-            )}
-          </li>
-        ))}
+        {planDays.map((o) => {
+          const description = entries.find((e) => e.id === o.entryId)?.description
+          return (
+            <li key={o.date} className="flex flex-wrap items-center gap-3 py-1.5">
+              <span className="min-w-[110px]">{formatDate(o.date)}</span>
+              <Badge tone={STATUS_TONE[o.status]}>{STATUS_LABEL[o.status]}</Badge>
+              {description && <Hint as="span">{description}</Hint>}
+              {isMine && o.entryId === null && (
+                <span className="flex w-full flex-wrap items-center gap-3 sm:ml-auto sm:w-auto">
+                  {o.date <= today && (
+                    <DrawablyButton onClick={() => onResolve({ planId: plan.id, scheduledFor: o.date, excused: false })}>
+                      Zrobione
+                    </DrawablyButton>
+                  )}
+                  <DrawablyButton
+                    tone="neutral"
+                    onClick={() => onResolve({ planId: plan.id, scheduledFor: o.date, excused: true })}
+                  >
+                    Wymówka
+                  </DrawablyButton>
+                </span>
+              )}
+            </li>
+          )
+        })}
       </ul>
-      {deletePlan.error && <ErrorText>{deletePlan.error.message}</ErrorText>}
+      {mutation.error && <ErrorText>{mutation.error.message}</ErrorText>}
     </Card>
   )
 }

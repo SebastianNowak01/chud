@@ -12,16 +12,14 @@ import (
 
 var colorPattern = regexp.MustCompile(`^#[0-9a-f]{6}$`)
 
-// normalizeColor lowercases the value and validates it as #rrggbb.
 func normalizeColor(color string) (string, *apperr.ServiceError) {
 	color = strings.ToLower(strings.TrimSpace(color))
 	if !colorPattern.MatchString(color) {
-		return "", apperr.NewBadRequestError("color must be in #rrggbb format")
+		return "", apperr.NewBadRequestError("kolor musi mieć format #rrggbb")
 	}
 	return color, nil
 }
 
-// randomColor picks a random hue with fixed saturation and lightness, so it stays readable.
 func randomColor() string {
 	const saturation, lightness = 0.65, 0.45
 	hue := rand.Float64() * 360

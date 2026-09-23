@@ -8,14 +8,11 @@ import (
 	"github.com/sebnow/chud/platform/db"
 )
 
-// ServiceError represents an error that occurred during a service operation.
-// It includes an HTTP status code and the underlying error.
 type ServiceError struct {
 	Code int
 	Err  error
 }
 
-// NewNotFoundError creates a 404 Not Found ServiceError. It uses [fmt.Errorf] under the hood, so you can use %w to wrap existing errors.
 func NewNotFoundError(format string, args ...any) *ServiceError {
 	return &ServiceError{
 		Code: http.StatusNotFound,
@@ -23,7 +20,6 @@ func NewNotFoundError(format string, args ...any) *ServiceError {
 	}
 }
 
-// NewInternalError creates a 500 Internal Server Error ServiceError. It uses [fmt.Errorf] under the hood, so you can use %w to wrap existing errors.
 func NewInternalError(format string, args ...any) *ServiceError {
 	return &ServiceError{
 		Code: http.StatusInternalServerError,
@@ -31,7 +27,6 @@ func NewInternalError(format string, args ...any) *ServiceError {
 	}
 }
 
-// NewBadRequestError creates a 400 Bad Request ServiceError. It uses [fmt.Errorf] under the hood, so you can use %w to wrap existing errors.
 func NewBadRequestError(format string, args ...any) *ServiceError {
 	return &ServiceError{
 		Code: http.StatusBadRequest,
@@ -39,7 +34,6 @@ func NewBadRequestError(format string, args ...any) *ServiceError {
 	}
 }
 
-// NewUnauthorizedError creates a 401 Unauthorized ServiceError. It uses [fmt.Errorf] under the hood, so you can use %w to wrap existing errors.
 func NewUnauthorizedError(format string, args ...any) *ServiceError {
 	return &ServiceError{
 		Code: http.StatusUnauthorized,
@@ -47,7 +41,6 @@ func NewUnauthorizedError(format string, args ...any) *ServiceError {
 	}
 }
 
-// NewConflictError creates a 409 Conflict ServiceError. It uses [fmt.Errorf] under the hood, so you can use %w to wrap existing errors.
 func NewConflictError(format string, args ...any) *ServiceError {
 	return &ServiceError{
 		Code: http.StatusConflict,
@@ -55,12 +48,10 @@ func NewConflictError(format string, args ...any) *ServiceError {
 	}
 }
 
-// Error implements the error interface for ServiceError.
 func (e ServiceError) Error() string {
 	return e.Err.Error()
 }
 
-// NewForbiddenError creates a 403 Forbidden ServiceError. It uses [fmt.Errorf] under the hood, so you can use %w to wrap existing errors.
 func NewForbiddenError(format string, args ...any) *ServiceError {
 	return &ServiceError{
 		Code: http.StatusForbidden,
@@ -68,14 +59,30 @@ func NewForbiddenError(format string, args ...any) *ServiceError {
 	}
 }
 
-// FromDAO maps db sentinel errors to a ServiceError about the given resource (e.g. "user").
 func FromDAO(err error, resource string) *ServiceError {
 	switch {
 	case errors.Is(err, db.ErrNotFound):
-		return NewNotFoundError("%s not found", resource)
+		return NewNotFoundError("nie znaleziono: %s", resourceName(resource))
 	case errors.Is(err, db.ErrAlreadyExists):
-		return NewConflictError("%s already exists", resource)
+		return NewConflictError("już istnieje: %s", resourceName(resource))
+	case errors.Is(err, db.ErrInUse):
+		return NewConflictError("wciąż w użyciu: %s", resourceName(resource))
 	default:
 		return NewInternalError("%w", err)
 	}
+}
+
+var resourceNames = map[string]string{
+	"activity": "aktywność",
+	"entry":    "wpis",
+	"media":    "plik",
+	"plan":     "plan",
+	"user":     "użytkownik",
+}
+
+func resourceName(resource string) string {
+	if name, ok := resourceNames[resource]; ok {
+		return name
+	}
+	return resource
 }

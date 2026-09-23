@@ -29,12 +29,11 @@ func DefaultServerConfig() ServerConfig {
 	return ServerConfig{
 		Host:         "0.0.0.0",
 		Port:         os.Getenv(appconfig.APIPort),
-		ReadTimeout:  2 * time.Minute, // media uploads
+		ReadTimeout:  2 * time.Minute,
 		WriteTimeout: 2 * time.Minute,
 	}
 }
 
-// createServer sets up the HTTP server with public and protected routes, applying necessary middleware.
 func createServer(
 	ctx context.Context,
 	config ServerConfig,
@@ -63,7 +62,6 @@ func createServer(
 			return
 		}
 
-		// Apply JWT auth to protected API paths
 		protectedHandler.ServeHTTP(w, r)
 	})
 
@@ -76,8 +74,8 @@ func createServer(
 
 	handler := c.Handler(router)
 
+	handler = httpx.Recoverer(handler)
 	handler = httpx.Logger(ctx, handler)
-	handler = httpx.Recoverer(ctx, handler)
 
 	server := &http.Server{
 		Addr:         net.JoinHostPort(config.Host, config.Port),
@@ -88,25 +86,20 @@ func createServer(
 	return server, nil
 }
 
-// StartServer initializes and starts the HTTP server based on the provided configuration.
 func StartServer(
 	ctx context.Context,
 	config ServerConfig,
 	staticFiles embed.FS,
 	handlers Handlers,
-) (*http.Server, chan struct{}, error) {
+) (*http.Server, error) {
 	logger := log.FromContext(ctx).With().Str("component", "api_server").Logger()
 
 	server, err := createServer(ctx, config, staticFiles, handlers)
 	if err != nil {
 		logger.Error().Err(err).Msg("Error creating API server")
-		return nil, nil, err
+		return nil, err
 	}
 
-	// Create a done channel to signal when server is shut down
-	done := make(chan struct{})
-
-	// Start server in a goroutine
 	go func() {
 		logger.Info().Msgf("API server listening on %s", server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -114,5 +107,5 @@ func StartServer(
 		}
 	}()
 
-	return server, done, nil
+	return server, nil
 }

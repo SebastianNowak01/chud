@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -15,13 +16,8 @@ func Logger(ctx context.Context, next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reqID := uuid.New().String()
-
-		reqCtx := context.WithValue(r.Context(), "request_id", reqID)
-
 		logger := baseLogger.With().Str("request_id", reqID).Logger()
-		reqCtx = log.WithContext(reqCtx, &logger)
-
-		r = r.WithContext(reqCtx)
+		r = r.WithContext(log.WithContext(r.Context(), &logger))
 
 		shouldLog := strings.HasPrefix(r.URL.Path, "/api/")
 
@@ -53,13 +49,13 @@ func Logger(ctx context.Context, next http.Handler) http.Handler {
 	})
 }
 
-func Recoverer(ctx context.Context, next http.Handler) http.Handler {
+func Recoverer(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
-			if err := recover(); err != nil {
-				logger := log.FromContext(r.Context())
-				logger.Error().Any("panic", err).Msg("Panic recovered")
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			if p := recover(); p != nil {
+				ctx := r.Context()
+				log.FromContext(ctx).Error().Any("panic", p).Msg("Panic recovered")
+				RespondError(ctx, w, http.StatusInternalServerError, errors.New("panic"))
 			}
 		}()
 		next.ServeHTTP(w, r)

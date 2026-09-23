@@ -1,6 +1,7 @@
 package entries
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/sebnow/chud/platform/auth"
+	"github.com/sebnow/chud/platform/clock"
 	"github.com/sebnow/chud/platform/constants"
 	"github.com/sebnow/chud/platform/httpx"
 )
@@ -39,8 +41,6 @@ func (c *EntryAPIController) GetEntriesByActivityHandler(w http.ResponseWriter, 
 	httpx.RespondJSON(ctx, w, http.StatusOK, entries)
 }
 
-// CreateEntryHandler accepts multipart/form-data with the fields
-// description, occurredAt (RFC 3339), planId, scheduledFor (YYYY-MM-DD), excused ("true") and files.
 func (c *EntryAPIController) CreateEntryHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	claims, ok := auth.ExtractUserOrRespond(ctx, w, r)
@@ -50,7 +50,11 @@ func (c *EntryAPIController) CreateEntryHandler(w http.ResponseWriter, r *http.R
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestSize)
 	if err := r.ParseMultipartForm(maxFormMemory); err != nil {
-		httpx.RespondError(ctx, w, http.StatusBadRequest, fmt.Errorf("invalid form: %w", err))
+		if _, tooLarge := errors.AsType[*http.MaxBytesError](err); tooLarge {
+			httpx.RespondError(ctx, w, http.StatusRequestEntityTooLarge, errors.New("pliki są za duże"))
+			return
+		}
+		httpx.RespondError(ctx, w, http.StatusBadRequest, errors.New("nieprawidłowy formularz"))
 		return
 	}
 	defer r.MultipartForm.RemoveAll()
@@ -89,16 +93,14 @@ func (c *EntryAPIController) GetMediaHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Media never changes once uploaded.
 	w.Header().Set(constants.HTTPHeaderContentType, media.ContentType)
 	w.Header().Set(constants.HTTPHeaderCacheControl, "private, max-age=31536000, immutable")
 	_, _ = w.Write(media.Data)
 }
 
-// GetEntriesInRangeHandler returns everyone's entries in [from, to); both are RFC 3339 query params.
 func (c *EntryAPIController) GetEntriesInRangeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	from, to, err := parseRange(r)
+	from, to, err := httpx.DateRangeQuery(r)
 	if err != nil {
 		httpx.RespondError(ctx, w, http.StatusBadRequest, err)
 		return
@@ -113,7 +115,6 @@ func (c *EntryAPIController) GetEntriesInRangeHandler(w http.ResponseWriter, r *
 	httpx.RespondJSON(ctx, w, http.StatusOK, entries)
 }
 
-// GetMyEntriesInRangeHandler returns the current user's entries in [from, to).
 func (c *EntryAPIController) GetMyEntriesInRangeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	claims, ok := auth.ExtractUserOrRespond(ctx, w, r)
@@ -121,7 +122,7 @@ func (c *EntryAPIController) GetMyEntriesInRangeHandler(w http.ResponseWriter, r
 		return
 	}
 
-	from, to, err := parseRange(r)
+	from, to, err := httpx.DateRangeQuery(r)
 	if err != nil {
 		httpx.RespondError(ctx, w, http.StatusBadRequest, err)
 		return
@@ -136,16 +137,21 @@ func (c *EntryAPIController) GetMyEntriesInRangeHandler(w http.ResponseWriter, r
 	httpx.RespondJSON(ctx, w, http.StatusOK, entries)
 }
 
-func parseRange(r *http.Request) (time.Time, time.Time, error) {
-	from, err := time.Parse(time.RFC3339, r.URL.Query().Get("from"))
+func (c *EntryAPIController) GetUserEntriesInRangeHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	from, to, err := httpx.DateRangeQuery(r)
 	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("from must be an RFC 3339 timestamp")
+		httpx.RespondError(ctx, w, http.StatusBadRequest, err)
+		return
 	}
-	to, err := time.Parse(time.RFC3339, r.URL.Query().Get("to"))
-	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("to must be an RFC 3339 timestamp")
+
+	entries, svcErr := c.service.GetUserEntriesInRange(ctx, r.PathValue("id"), from, to)
+	if svcErr != nil {
+		httpx.RespondError(ctx, w, svcErr.Code, svcErr.Err)
+		return
 	}
-	return from.UTC(), to.UTC(), nil
+
+	httpx.RespondJSON(ctx, w, http.StatusOK, entries)
 }
 
 func parseCreateEntryForm(form *multipart.Form) (CreateEntryPayload, error) {
@@ -164,7 +170,7 @@ func parseCreateEntryForm(form *multipart.Form) (CreateEntryPayload, error) {
 	if v := value("occurredAt"); v != "" {
 		occurredAt, err := time.Parse(time.RFC3339, v)
 		if err != nil {
-			return payload, fmt.Errorf("occurredAt must be an RFC 3339 timestamp")
+			return payload, fmt.Errorf("occurredAt musi być znacznikiem czasu RFC 3339")
 		}
 		payload.OccurredAt = occurredAt
 	}
@@ -172,9 +178,9 @@ func parseCreateEntryForm(form *multipart.Form) (CreateEntryPayload, error) {
 		payload.PlanID = &v
 	}
 	if v := value("scheduledFor"); v != "" {
-		scheduledFor, err := time.Parse(time.DateOnly, v)
+		scheduledFor, err := clock.ParseDate(v)
 		if err != nil {
-			return payload, fmt.Errorf("scheduledFor must be a YYYY-MM-DD date")
+			return payload, fmt.Errorf("scheduledFor musi być datą RRRR-MM-DD")
 		}
 		payload.ScheduledFor = &scheduledFor
 	}
@@ -190,21 +196,20 @@ func parseCreateEntryForm(form *multipart.Form) (CreateEntryPayload, error) {
 	return payload, nil
 }
 
-// readFile reads an uploaded file, detecting its type from the content and falling back to the browser's.
 func readFile(header *multipart.FileHeader) (Media, error) {
 	if header.Size > MaxFileSize {
-		return Media{}, fmt.Errorf("%s is larger than 10 MB", header.Filename)
+		return Media{}, fmt.Errorf("plik %s ma więcej niż 10 MB", header.Filename)
 	}
 
 	f, err := header.Open()
 	if err != nil {
-		return Media{}, fmt.Errorf("failed to read %s: %w", header.Filename, err)
+		return Media{}, fmt.Errorf("nie udało się odczytać pliku %s", header.Filename)
 	}
 	defer f.Close()
 
 	data, err := io.ReadAll(f)
 	if err != nil {
-		return Media{}, fmt.Errorf("failed to read %s: %w", header.Filename, err)
+		return Media{}, fmt.Errorf("nie udało się odczytać pliku %s", header.Filename)
 	}
 
 	contentType := http.DetectContentType(data)

@@ -1,15 +1,12 @@
 // Dates are handled as local "YYYY-MM-DD" strings, the format the API uses for plan days.
 
-// The UI is English, so dates are too, whatever the browser's language.
-export const LOCALE = 'en-GB'
+// The UI is Polish, so dates are too, whatever the browser's language.
+export const LOCALE = 'pl-PL'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
 export const toDateString = (date: Date): string =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-
-// The API returns DATE columns as midnight UTC timestamps; the date part is what matters.
-export const apiDate = (value: string): string => value.slice(0, 10)
 
 // Parses a "YYYY-MM-DD" string as a local date (at noon, so DST shifts never change the day).
 export const parseDate = (value: string): Date => {
@@ -29,6 +26,9 @@ export const toDateTimeLocal = (date: Date): string =>
 
 export const formatDateTime = (iso: string): string =>
   new Date(iso).toLocaleString(LOCALE, { dateStyle: 'medium', timeStyle: 'short' })
+
+export const formatTime = (iso: string): string =>
+  new Date(iso).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })
 
 export const formatMonth = (dateString: string): string =>
   parseDate(dateString).toLocaleDateString(LOCALE, { month: 'short' })
