@@ -3,6 +3,7 @@ package entries
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -162,6 +163,9 @@ func TestCreateEntryValidation(t *testing.T) {
 		{"entry in the future", "gym", "bob", CreateEntryPayload{OccurredAt: time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)}, http.StatusBadRequest},
 		{"excuse without description", "gym", "alice", CreateEntryPayload{PlanID: ptr("alice-gym"), ScheduledFor: date("2026-09-21"), Excused: true}, http.StatusBadRequest},
 		{"not a media file", "gym", "bob", CreateEntryPayload{Files: []Media{{ContentType: "application/pdf"}}}, http.StatusBadRequest},
+		{"svg image", "gym", "bob", CreateEntryPayload{Files: []Media{{ContentType: "image/svg+xml"}}}, http.StatusBadRequest},
+		{"too many files", "gym", "bob", CreateEntryPayload{Files: make([]Media, MaxFileCount+1)}, http.StatusBadRequest},
+		{"description too long", "gym", "bob", CreateEntryPayload{Description: strings.Repeat("ą", MaxDescriptionLength+1)}, http.StatusBadRequest},
 		{"file too big", "gym", "bob", CreateEntryPayload{Files: []Media{{ContentType: "image/png", Data: make([]byte, MaxFileSize+1)}}}, http.StatusBadRequest},
 	}
 	for _, tt := range tests {
@@ -216,4 +220,30 @@ func TestGetEntriesInRangeValidation(t *testing.T) {
 	_, svcErr = svc.GetEntriesInRange(context.Background(), today.AddDays(-2*365), today)
 	require.NotNil(t, svcErr)
 	assert.Equal(t, http.StatusBadRequest, svcErr.Code, "range too long")
+}
+
+func TestDetectMediaType(t *testing.T) {
+	tests := []struct {
+		name string
+		head []byte
+		want string
+		ok   bool
+	}{
+		{"png", []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"), "image/png", true},
+		{"jpeg", []byte("\xff\xd8\xff\xe0\x00\x10JFIF"), "image/jpeg", true},
+		{"mp4", []byte("\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom"), "video/mp4", true},
+		{"quicktime", []byte("\x00\x00\x00\x14ftypqt  \x00\x00\x02\x00qt  "), "video/quicktime", true},
+		{"svg", []byte(`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`), "", false},
+		{"html", []byte(`<!DOCTYPE html><script>alert(1)</script>`), "", false},
+		{"binary", []byte("\x01\x02\x03<svg onload=alert(1)>"), "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := DetectMediaType(tt.head)
+			assert.Equal(t, tt.ok, IsAllowedMediaType(got), got)
+			if tt.ok {
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
 }

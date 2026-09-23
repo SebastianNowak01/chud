@@ -14,7 +14,8 @@ func RegisterRoutes(publicRouter *http.ServeMux, protectedRouter *http.ServeMux,
 
 	protectedRouter.HandleFunc("GET /api/v1/users", c.GetAllUsersHandler)
 	protectedRouter.HandleFunc("GET /api/v1/users/{id}", c.GetUserHandler)
-	protectedRouter.HandleFunc("POST /api/v1/users", auth.RequireAdmin(c.CreateUserHandler))
-	protectedRouter.HandleFunc("PUT /api/v1/users/{id}", auth.RequireAdmin(c.UpdateUserHandler))
-	protectedRouter.HandleFunc("DELETE /api/v1/users/{id}", auth.RequireAdmin(c.DeleteUserHandler))
+	requireAdmin := auth.RequireAdmin(c.service.IsAdmin)
+	protectedRouter.HandleFunc("POST /api/v1/users", requireAdmin(c.CreateUserHandler))
+	protectedRouter.HandleFunc("PUT /api/v1/users/{id}", requireAdmin(c.UpdateUserHandler))
+	protectedRouter.HandleFunc("DELETE /api/v1/users/{id}", requireAdmin(c.DeleteUserHandler))
 }

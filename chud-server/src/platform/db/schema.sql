@@ -71,6 +71,8 @@ SELECT pg_temp.add_constraint('plans', 'plans_dates',
     'CHECK (ends_on IS NULL OR ends_on >= starts_on)');
 SELECT pg_temp.add_constraint('plans', 'plans_title',
     $c$CHECK (btrim(title) <> '')$c$);
+SELECT pg_temp.add_constraint('plans', 'plans_title_length',
+    'CHECK (char_length(title) <= 100) NOT VALID');
 SELECT pg_temp.add_constraint('plans', 'plans_identity',
     'UNIQUE (id, activity_id, user_id)');
 
@@ -82,6 +84,14 @@ SELECT pg_temp.add_constraint('entries', 'entries_excuse_planned',
     'CHECK (NOT excused OR plan_id IS NOT NULL)');
 SELECT pg_temp.add_constraint('entries', 'entries_excuse_reason',
     $c$CHECK (NOT excused OR btrim(description) <> '')$c$);
+SELECT pg_temp.add_constraint('entries', 'entries_description_length',
+    'CHECK (char_length(description) <= 2000) NOT VALID');
+SELECT pg_temp.add_constraint('activities', 'activities_name_length',
+    'CHECK (char_length(name) <= 50) NOT VALID');
+SELECT pg_temp.add_constraint('activities', 'activities_description_length',
+    'CHECK (char_length(description) <= 500) NOT VALID');
+SELECT pg_temp.add_constraint('media', 'media_content_type',
+    $c$CHECK (content_type IN ('image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime')) NOT VALID$c$);
 
 CREATE INDEX IF NOT EXISTS entries_occurred_at_idx ON entries (occurred_at);
 CREATE INDEX IF NOT EXISTS entries_user_occurred_at_idx ON entries (user_id, occurred_at);

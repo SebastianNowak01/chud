@@ -204,3 +204,39 @@ func TestUpdateMeColor(t *testing.T) {
 	require.NotNil(t, svcErr)
 	assert.Equal(t, http.StatusBadRequest, svcErr.Code)
 }
+
+func TestLoginRateLimit(t *testing.T) {
+	ctx := context.Background()
+	svc := newTestService(t)
+
+	for range maxLoginFailures {
+		_, svcErr := svc.Login(ctx, LoginPayload{Username: "admin", Password: "wrong"})
+		require.NotNil(t, svcErr)
+		assert.Equal(t, http.StatusUnauthorized, svcErr.Code)
+	}
+
+	_, svcErr := svc.Login(ctx, LoginPayload{Username: " ADMIN ", Password: "admin-pass"})
+	require.NotNil(t, svcErr)
+	assert.Equal(t, http.StatusTooManyRequests, svcErr.Code, "blocked even with the right password")
+}
+
+func TestIsAdmin(t *testing.T) {
+	ctx := context.Background()
+	svc := newTestService(t)
+	admin := findAdmin(t, svc)
+	alice, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "alice", Password: "secret1"})
+	require.Nil(t, svcErr)
+
+	isAdmin, err := svc.IsAdmin(ctx, admin.ID)
+	require.NoError(t, err)
+	assert.True(t, isAdmin)
+
+	isAdmin, err = svc.IsAdmin(ctx, alice.ID)
+	require.NoError(t, err)
+	assert.False(t, isAdmin)
+
+	require.NoError(t, svc.EnsureAdminUserExists(ctx, "root", "root-pass"))
+	isAdmin, err = svc.IsAdmin(ctx, admin.ID)
+	require.NoError(t, err)
+	assert.False(t, isAdmin, "demoted admin loses access despite old token")
+}

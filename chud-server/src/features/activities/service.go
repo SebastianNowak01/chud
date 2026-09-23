@@ -3,6 +3,7 @@ package activities
 import (
 	"context"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/sebnow/chud/features/users"
@@ -10,7 +11,10 @@ import (
 	"github.com/sebnow/chud/platform/log"
 )
 
-const maxNameLength = 50
+const (
+	maxNameLength        = 50
+	maxDescriptionLength = 500
+)
 
 type IActivityService interface {
 	GetAllActivities(ctx context.Context) ([]Activity, *apperr.ServiceError)
@@ -53,14 +57,18 @@ func (s *ActivityService) CreateActivity(
 	payload CreateActivityPayload,
 ) (*Activity, *apperr.ServiceError) {
 	name := strings.TrimSpace(payload.Name)
-	if name == "" || len(name) > maxNameLength {
+	if name == "" || utf8.RuneCountInString(name) > maxNameLength {
 		return nil, apperr.NewBadRequestError("nazwa musi mieć od 1 do %d znaków", maxNameLength)
+	}
+	description := strings.TrimSpace(payload.Description)
+	if utf8.RuneCountInString(description) > maxDescriptionLength {
+		return nil, apperr.NewBadRequestError("opis może mieć maksymalnie %d znaków", maxDescriptionLength)
 	}
 
 	activity, err := s.dao.InsertActivity(ctx, &Activity{
 		ID:          uuid.NewString(),
 		Name:        name,
-		Description: strings.TrimSpace(payload.Description),
+		Description: description,
 		CreatedBy:   userID,
 	})
 	if err != nil {

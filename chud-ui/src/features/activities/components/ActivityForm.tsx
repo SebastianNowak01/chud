@@ -35,6 +35,7 @@ export function ActivityForm({ onDone }: { onDone: () => void }) {
             id="activity-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            maxLength={500}
           />
         </Field>
         {createActivity.error && <ErrorText>{createActivity.error.message}</ErrorText>}

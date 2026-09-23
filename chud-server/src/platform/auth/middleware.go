@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -40,17 +41,26 @@ func tokenFromRequest(r *http.Request) string {
 	return ""
 }
 
-func RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		user, ok := ExtractUserOrRespond(ctx, w, r)
-		if !ok {
-			return
+type AdminCheck func(ctx context.Context, userID string) (bool, error)
+
+func RequireAdmin(isAdmin AdminCheck) func(http.HandlerFunc) http.HandlerFunc {
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			user, ok := ExtractUserOrRespond(ctx, w, r)
+			if !ok {
+				return
+			}
+			admin, err := isAdmin(ctx, user.UserID)
+			if err != nil {
+				httpx.RespondError(ctx, w, http.StatusInternalServerError, err)
+				return
+			}
+			if !user.IsAdmin || !admin {
+				httpx.RespondError(ctx, w, http.StatusForbidden, fmt.Errorf("wymagane uprawnienia administratora"))
+				return
+			}
+			next(w, r)
 		}
-		if !user.IsAdmin {
-			httpx.RespondError(ctx, w, http.StatusForbidden, fmt.Errorf("wymagane uprawnienia administratora"))
-			return
-		}
-		next(w, r)
 	}
 }

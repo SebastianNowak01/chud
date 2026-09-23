@@ -24,3 +24,16 @@ export interface EntryPayload {
   excused?: boolean
   files: File[]
 }
+
+export const MEDIA_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+]
+export const MAX_FILE_SIZE = 10 * 1024 * 1024
+export const MAX_FILE_COUNT = 10
+export const MAX_DESCRIPTION_LENGTH = 2000

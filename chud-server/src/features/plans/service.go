@@ -3,12 +3,15 @@ package plans
 import (
 	"context"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/sebnow/chud/features/activities"
 	"github.com/sebnow/chud/platform/apperr"
 	"github.com/sebnow/chud/platform/clock"
 )
+
+const MaxTitleLength = 100
 
 type IPlanService interface {
 	GetPlansByActivity(ctx context.Context, activityID string) ([]Plan, *apperr.ServiceError)
@@ -79,9 +82,9 @@ func (s *PlanService) UpdatePlan(
 	}
 
 	if payload.Title != nil {
-		title := strings.TrimSpace(*payload.Title)
-		if title == "" {
-			return nil, apperr.NewBadRequestError("tytuł jest wymagany")
+		title, svcErr := normalizeTitle(*payload.Title)
+		if svcErr != nil {
+			return nil, svcErr
 		}
 		plan.Title = title
 	}
@@ -158,9 +161,9 @@ func (s *PlanService) getOwnPlan(ctx context.Context, id, userID string) (*Plan,
 }
 
 func applyPayload(plan *Plan, payload PlanPayload) *apperr.ServiceError {
-	title := strings.TrimSpace(payload.Title)
-	if title == "" {
-		return apperr.NewBadRequestError("tytuł jest wymagany")
+	title, svcErr := normalizeTitle(payload.Title)
+	if svcErr != nil {
+		return svcErr
 	}
 
 	anyDay := payload.Monday || payload.Tuesday || payload.Wednesday || payload.Thursday ||
@@ -187,6 +190,17 @@ func applyPayload(plan *Plan, payload PlanPayload) *apperr.ServiceError {
 	plan.StartsOn = payload.StartsOn
 	plan.EndsOn = payload.EndsOn
 	return nil
+}
+
+func normalizeTitle(value string) (string, *apperr.ServiceError) {
+	title := strings.TrimSpace(value)
+	if title == "" {
+		return "", apperr.NewBadRequestError("tytuł jest wymagany")
+	}
+	if utf8.RuneCountInString(title) > MaxTitleLength {
+		return "", apperr.NewBadRequestError("tytuł może mieć maksymalnie %d znaków", MaxTitleLength)
+	}
+	return title, nil
 }
 
 func daoError(err error) *apperr.ServiceError {
