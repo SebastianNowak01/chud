@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { routeTree } from '../routeTree.gen'
 
+import '@fontsource/shantell-sans/400.css'
+import '@fontsource/shantell-sans/700.css'
 import 'drawably/style.css'
 import '../styles.css'
 

@@ -2,6 +2,7 @@ import { getRouteApi, Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { DrawablyButton, DrawablyDivider } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
+import { Logo } from '@/components/layout/Logo'
 import { clearToken } from '@/features/auth/lib/token'
 import { useMe } from '@/features/me/me-api'
 
@@ -23,7 +24,7 @@ export function AppLayout() {
     <div className="page">
       <header className="header">
         <nav className="row nav">
-          <h1>chud</h1>
+          <Logo size="small" linked />
           <Link to="/activities">Activities</Link>
           <Link to="/profile">Profile</Link>
           {session.is_admin && <Link to="/users">Users</Link>}
