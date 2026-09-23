@@ -30,7 +30,11 @@ func (c *ActivityAPIController) GetAllActivitiesHandler(w http.ResponseWriter, r
 
 func (c *ActivityAPIController) GetActivityHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	activity, err := c.service.GetActivity(ctx, r.PathValue("id"))
+	id, ok := httpx.PathUUIDOrRespond(w, r, "id")
+	if !ok {
+		return
+	}
+	activity, err := c.service.GetActivity(ctx, id)
 	if err != nil {
 		httpx.RespondError(ctx, w, err.Code, err.Err)
 		return
@@ -62,7 +66,11 @@ func (c *ActivityAPIController) CreateActivityHandler(w http.ResponseWriter, r *
 
 func (c *ActivityAPIController) GetMembersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	members, err := c.service.GetMembers(ctx, r.PathValue("id"))
+	id, ok := httpx.PathUUIDOrRespond(w, r, "id")
+	if !ok {
+		return
+	}
+	members, err := c.service.GetMembers(ctx, id)
 	if err != nil {
 		httpx.RespondError(ctx, w, err.Code, err.Err)
 		return

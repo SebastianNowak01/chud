@@ -1,10 +1,13 @@
 package entries
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/sebnow/chud/features/activities"
@@ -16,10 +19,35 @@ import (
 )
 
 const (
-	MaxFileSize  = 10 << 20
-	MaxFileCount = 10
-	maxClockSkew = 5 * time.Minute
+	MaxFileSize          = 10 << 20
+	MaxFileCount         = 10
+	MaxDescriptionLength = 2000
+	maxClockSkew         = 5 * time.Minute
+	sniffLength          = 512
 )
+
+const unsupportedMediaMessage = "można dołączać tylko zdjęcia (JPG, PNG, GIF, WebP) i filmy (MP4, WebM, MOV)"
+
+var allowedMediaTypes = map[string]bool{
+	"image/jpeg":      true,
+	"image/png":       true,
+	"image/gif":       true,
+	"image/webp":      true,
+	"video/mp4":       true,
+	"video/webm":      true,
+	"video/quicktime": true,
+}
+
+func IsAllowedMediaType(contentType string) bool {
+	return allowedMediaTypes[contentType]
+}
+
+func DetectMediaType(head []byte) string {
+	if len(head) >= 12 && bytes.Equal(head[4:8], []byte("ftyp")) && bytes.Equal(head[8:12], []byte("qt  ")) {
+		return "video/quicktime"
+	}
+	return http.DetectContentType(head)
+}
 
 type IEntryService interface {
 	GetEntriesByActivity(ctx context.Context, activityID string) ([]Entry, *apperr.ServiceError)
@@ -110,6 +138,10 @@ func (s *EntryService) CreateEntry(
 		return nil, apperr.NewBadRequestError("tylko wpis do planu może mieć zaplanowany dzień albo być wymówką")
 	}
 
+	if utf8.RuneCountInString(entry.Description) > MaxDescriptionLength {
+		return nil, apperr.NewBadRequestError("opis może mieć maksymalnie %d znaków", MaxDescriptionLength)
+	}
+
 	if entry.Excused && entry.Description == "" {
 		return nil, apperr.NewBadRequestError("wymówka musi mieć opis")
 	}
@@ -126,8 +158,8 @@ func (s *EntryService) CreateEntry(
 		if len(f.Data) > MaxFileSize {
 			return nil, apperr.NewBadRequestError("pliki mogą mieć maksymalnie 10 MB")
 		}
-		if !strings.HasPrefix(f.ContentType, "image/") && !strings.HasPrefix(f.ContentType, "video/") {
-			return nil, apperr.NewBadRequestError("można dołączać tylko zdjęcia i filmy")
+		if !IsAllowedMediaType(f.ContentType) {
+			return nil, apperr.NewBadRequestError(unsupportedMediaMessage)
 		}
 		media = append(media, Media{ID: uuid.NewString(), ContentType: f.ContentType, Data: f.Data})
 	}

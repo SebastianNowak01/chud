@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/cors"
 	"github.com/sebnow/chud/platform/auth"
 	appconfig "github.com/sebnow/chud/platform/config"
 	"github.com/sebnow/chud/platform/httpx"
@@ -19,18 +18,22 @@ import (
 )
 
 type ServerConfig struct {
-	Host         string
-	Port         string
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
+	Host              string
+	Port              string
+	ReadHeaderTimeout time.Duration
+	ReadTimeout       time.Duration
+	WriteTimeout      time.Duration
+	IdleTimeout       time.Duration
 }
 
 func DefaultServerConfig() ServerConfig {
 	return ServerConfig{
-		Host:         "0.0.0.0",
-		Port:         os.Getenv(appconfig.APIPort),
-		ReadTimeout:  2 * time.Minute,
-		WriteTimeout: 2 * time.Minute,
+		Host:              "0.0.0.0",
+		Port:              os.Getenv(appconfig.APIPort),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       2 * time.Minute,
+		WriteTimeout:      2 * time.Minute,
+		IdleTimeout:       2 * time.Minute,
 	}
 }
 
@@ -65,23 +68,17 @@ func createServer(
 		protectedHandler.ServeHTTP(w, r)
 	})
 
-	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type"},
-		AllowCredentials: true,
-	})
-
-	handler := c.Handler(router)
-
+	handler := httpx.SecurityHeaders(router)
 	handler = httpx.Recoverer(handler)
 	handler = httpx.Logger(ctx, handler)
 
 	server := &http.Server{
-		Addr:         net.JoinHostPort(config.Host, config.Port),
-		Handler:      handler,
-		ReadTimeout:  config.ReadTimeout,
-		WriteTimeout: config.WriteTimeout,
+		Addr:              net.JoinHostPort(config.Host, config.Port),
+		Handler:           handler,
+		ReadHeaderTimeout: config.ReadHeaderTimeout,
+		ReadTimeout:       config.ReadTimeout,
+		WriteTimeout:      config.WriteTimeout,
+		IdleTimeout:       config.IdleTimeout,
 	}
 	return server, nil
 }

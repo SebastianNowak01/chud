@@ -3,13 +3,16 @@ package users
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/sebnow/chud/platform/apperr"
 	"github.com/sebnow/chud/platform/auth"
 	"github.com/sebnow/chud/platform/db"
 	"github.com/sebnow/chud/platform/log"
+	"github.com/sebnow/chud/platform/ratelimit"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,6 +21,8 @@ const (
 	maxUsernameLength = 32
 	minPasswordLength = 6
 	maxPasswordLength = 72
+	maxLoginFailures  = 10
+	loginFailWindow   = 15 * time.Minute
 )
 
 type IUserService interface {
@@ -29,6 +34,7 @@ type IUserService interface {
 	DeleteUser(ctx context.Context, id string) *apperr.ServiceError
 	Login(ctx context.Context, payload LoginPayload) (*LoginResponse, *apperr.ServiceError)
 	EnsureAdminUserExists(ctx context.Context, username, password string) error
+	IsAdmin(ctx context.Context, id string) (bool, error)
 }
 
 type UserServiceDeps struct {
@@ -36,13 +42,18 @@ type UserServiceDeps struct {
 }
 
 type UserService struct {
-	dao       IUserDAO
-	dummyHash []byte
+	dao          IUserDAO
+	dummyHash    []byte
+	loginLimiter *ratelimit.Limiter
 }
 
 func NewUserService(deps UserServiceDeps) *UserService {
 	dummyHash, _ := bcrypt.GenerateFromPassword([]byte("dummy-password"), bcrypt.DefaultCost)
-	return &UserService{dao: deps.UserDAO, dummyHash: dummyHash}
+	return &UserService{
+		dao:          deps.UserDAO,
+		dummyHash:    dummyHash,
+		loginLimiter: ratelimit.New(maxLoginFailures, loginFailWindow),
+	}
 }
 
 func (s *UserService) GetAllUsers(ctx context.Context) ([]User, *apperr.ServiceError) {
@@ -160,17 +171,28 @@ func (s *UserService) DeleteUser(ctx context.Context, id string) *apperr.Service
 }
 
 func (s *UserService) Login(ctx context.Context, payload LoginPayload) (*LoginResponse, *apperr.ServiceError) {
-	user, err := s.dao.GetUserByUsername(ctx, strings.TrimSpace(payload.Username))
+	username := strings.TrimSpace(payload.Username)
+	limitKey := strings.ToLower(username)
+	if !s.loginLimiter.Allowed(limitKey) {
+		log.FromContext(ctx).Warn().Str("username", username).Msg("Login blocked by rate limit")
+		return nil, &apperr.ServiceError{
+			Code: http.StatusTooManyRequests,
+			Err:  errors.New("za dużo nieudanych prób logowania, spróbuj za kilka minut"),
+		}
+	}
+
+	user, err := s.dao.GetUserByUsername(ctx, username)
 	if err != nil {
 		if !errors.Is(err, db.ErrNotFound) {
 			return nil, daoError(err)
 		}
 		_ = bcrypt.CompareHashAndPassword(s.dummyHash, []byte(payload.Password))
-		return nil, apperr.NewUnauthorizedError("nieprawidłowa nazwa użytkownika lub hasło")
+		return nil, s.loginFailed(ctx, username, limitKey)
 	}
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(payload.Password)) != nil {
-		return nil, apperr.NewUnauthorizedError("nieprawidłowa nazwa użytkownika lub hasło")
+		return nil, s.loginFailed(ctx, username, limitKey)
 	}
+	s.loginLimiter.Reset(limitKey)
 
 	token, err := auth.NewJwt(user.ID, user.Username, user.IsAdmin)
 	if err != nil {
@@ -178,6 +200,23 @@ func (s *UserService) Login(ctx context.Context, payload LoginPayload) (*LoginRe
 	}
 
 	return &LoginResponse{Token: token, User: *user}, nil
+}
+
+func (s *UserService) loginFailed(ctx context.Context, username, limitKey string) *apperr.ServiceError {
+	s.loginLimiter.Fail(limitKey)
+	log.FromContext(ctx).Warn().Str("username", username).Msg("Failed login attempt")
+	return apperr.NewUnauthorizedError("nieprawidłowa nazwa użytkownika lub hasło")
+}
+
+func (s *UserService) IsAdmin(ctx context.Context, id string) (bool, error) {
+	user, err := s.dao.GetUserByID(ctx, id)
+	if errors.Is(err, db.ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return user.IsAdmin, nil
 }
 
 func (s *UserService) EnsureAdminUserExists(ctx context.Context, username, password string) error {

@@ -4,6 +4,8 @@ import { Card } from '@/components/ui/Card'
 import { ErrorText } from '@/components/ui/ErrorText'
 import { Field } from '@/components/ui/Field'
 import { useCreateEntry } from '@/features/entries/entries-api'
+import { mediaFilesError } from '@/features/entries/media'
+import { MAX_DESCRIPTION_LENGTH, MEDIA_TYPES } from '@/features/entries/types'
 import { buttonState } from '@/lib/button-state'
 import { formatDate, toDateString, toDateTimeLocal } from '@/lib/dates'
 
@@ -30,6 +32,7 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
     doneDay && doneDay !== toDateString(now) ? `${doneDay}T12:00` : nowLocal,
   )
   const [files, setFiles] = useState<File[]>([])
+  const filesError = mediaFilesError(files)
   const createEntry = useCreateEntry(activityId)
 
   const title = !plannedDay
@@ -40,6 +43,9 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
+    if (filesError) {
+      return
+    }
     createEntry.mutate(
       {
         description,
@@ -63,6 +69,7 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            maxLength={MAX_DESCRIPTION_LENGTH}
             required={excused}
           />
         </Field>
@@ -81,14 +88,20 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
           <input
             id="entry-files"
             type="file"
-            accept="image/*,video/*"
+            accept={MEDIA_TYPES.join(',')}
             multiple
             onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
           />
         </Field>
+        {filesError && <ErrorText>{filesError}</ErrorText>}
         {createEntry.error && <ErrorText>{createEntry.error.message}</ErrorText>}
         <div className="flex flex-wrap items-center gap-3">
-          <DrawablyButton type="submit" variant="solid" state={buttonState(createEntry.status)}>
+          <DrawablyButton
+            type="submit"
+            variant="solid"
+            state={buttonState(createEntry.status)}
+            disabled={filesError !== null}
+          >
             Zapisz
           </DrawablyButton>
           <DrawablyButton type="button" tone="neutral" onClick={onDone}>

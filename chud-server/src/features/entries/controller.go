@@ -1,6 +1,7 @@
 package entries
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/sebnow/chud/platform/auth"
 	"github.com/sebnow/chud/platform/clock"
 	"github.com/sebnow/chud/platform/constants"
@@ -17,7 +19,7 @@ import (
 
 const (
 	maxRequestSize = MaxFileCount*MaxFileSize + 1<<20
-	maxFormMemory  = 32 << 20
+	maxFormMemory  = 8 << 20
 )
 
 type EntryAPIController struct {
@@ -32,7 +34,11 @@ func NewEntryAPIController(service IEntryService) EntryAPIController {
 
 func (c *EntryAPIController) GetEntriesByActivityHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	entries, err := c.service.GetEntriesByActivity(ctx, r.PathValue("id"))
+	id, ok := httpx.PathUUIDOrRespond(w, r, "id")
+	if !ok {
+		return
+	}
+	entries, err := c.service.GetEntriesByActivity(ctx, id)
 	if err != nil {
 		httpx.RespondError(ctx, w, err.Code, err.Err)
 		return
@@ -43,6 +49,10 @@ func (c *EntryAPIController) GetEntriesByActivityHandler(w http.ResponseWriter, 
 
 func (c *EntryAPIController) CreateEntryHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	id, ok := httpx.PathUUIDOrRespond(w, r, "id")
+	if !ok {
+		return
+	}
 	claims, ok := auth.ExtractUserOrRespond(ctx, w, r)
 	if !ok {
 		return
@@ -65,7 +75,7 @@ func (c *EntryAPIController) CreateEntryHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	entry, svcErr := c.service.CreateEntry(ctx, r.PathValue("id"), claims.UserID, payload)
+	entry, svcErr := c.service.CreateEntry(ctx, id, claims.UserID, payload)
 	if svcErr != nil {
 		httpx.RespondError(ctx, w, svcErr.Code, svcErr.Err)
 		return
@@ -76,7 +86,11 @@ func (c *EntryAPIController) CreateEntryHandler(w http.ResponseWriter, r *http.R
 
 func (c *EntryAPIController) GetMediaByEntryHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	media, err := c.service.GetMediaByEntry(ctx, r.PathValue("id"))
+	id, ok := httpx.PathUUIDOrRespond(w, r, "id")
+	if !ok {
+		return
+	}
+	media, err := c.service.GetMediaByEntry(ctx, id)
 	if err != nil {
 		httpx.RespondError(ctx, w, err.Code, err.Err)
 		return
@@ -87,15 +101,27 @@ func (c *EntryAPIController) GetMediaByEntryHandler(w http.ResponseWriter, r *ht
 
 func (c *EntryAPIController) GetMediaHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	media, err := c.service.GetMedia(ctx, r.PathValue("id"))
+	id, ok := httpx.PathUUIDOrRespond(w, r, "id")
+	if !ok {
+		return
+	}
+	media, err := c.service.GetMedia(ctx, id)
 	if err != nil {
 		httpx.RespondError(ctx, w, err.Code, err.Err)
 		return
 	}
 
-	w.Header().Set(constants.HTTPHeaderContentType, media.ContentType)
-	w.Header().Set(constants.HTTPHeaderCacheControl, "private, max-age=31536000, immutable")
-	_, _ = w.Write(media.Data)
+	h := w.Header()
+	if IsAllowedMediaType(media.ContentType) {
+		h.Set(constants.HTTPHeaderContentType, media.ContentType)
+		h.Set(constants.HTTPHeaderContentDisposition, "inline")
+	} else {
+		h.Set(constants.HTTPHeaderContentType, "application/octet-stream")
+		h.Set(constants.HTTPHeaderContentDisposition, "attachment")
+	}
+	h.Set(constants.HTTPHeaderContentSecurityPolicy, httpx.MediaContentSecurityPolicy)
+	h.Set(constants.HTTPHeaderCacheControl, "private, max-age=31536000, immutable")
+	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(media.Data))
 }
 
 func (c *EntryAPIController) GetEntriesInRangeHandler(w http.ResponseWriter, r *http.Request) {
@@ -139,13 +165,17 @@ func (c *EntryAPIController) GetMyEntriesInRangeHandler(w http.ResponseWriter, r
 
 func (c *EntryAPIController) GetUserEntriesInRangeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	id, ok := httpx.PathUUIDOrRespond(w, r, "id")
+	if !ok {
+		return
+	}
 	from, to, err := httpx.DateRangeQuery(r)
 	if err != nil {
 		httpx.RespondError(ctx, w, http.StatusBadRequest, err)
 		return
 	}
 
-	entries, svcErr := c.service.GetUserEntriesInRange(ctx, r.PathValue("id"), from, to)
+	entries, svcErr := c.service.GetUserEntriesInRange(ctx, id, from, to)
 	if svcErr != nil {
 		httpx.RespondError(ctx, w, svcErr.Code, svcErr.Err)
 		return
@@ -175,6 +205,9 @@ func parseCreateEntryForm(form *multipart.Form) (CreateEntryPayload, error) {
 		payload.OccurredAt = occurredAt
 	}
 	if v := value("planId"); v != "" {
+		if uuid.Validate(v) != nil {
+			return payload, errors.New("nie znaleziono: plan")
+		}
 		payload.PlanID = &v
 	}
 	if v := value("scheduledFor"); v != "" {
@@ -185,7 +218,11 @@ func parseCreateEntryForm(form *multipart.Form) (CreateEntryPayload, error) {
 		payload.ScheduledFor = &scheduledFor
 	}
 
-	for _, header := range form.File["files"] {
+	headers := form.File["files"]
+	if len(headers) > MaxFileCount {
+		return payload, fmt.Errorf("maksymalnie %d plików na wpis", MaxFileCount)
+	}
+	for _, header := range headers {
 		file, err := readFile(header)
 		if err != nil {
 			return payload, err
@@ -207,14 +244,19 @@ func readFile(header *multipart.FileHeader) (Media, error) {
 	}
 	defer f.Close()
 
-	data, err := io.ReadAll(f)
+	head := make([]byte, sniffLength)
+	n, err := io.ReadFull(f, head)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return Media{}, fmt.Errorf("nie udało się odczytać pliku %s", header.Filename)
+	}
+	contentType := DetectMediaType(head[:n])
+	if !IsAllowedMediaType(contentType) {
+		return Media{}, fmt.Errorf("plik %s: %s", header.Filename, unsupportedMediaMessage)
+	}
+
+	rest, err := io.ReadAll(io.LimitReader(f, MaxFileSize))
 	if err != nil {
 		return Media{}, fmt.Errorf("nie udało się odczytać pliku %s", header.Filename)
 	}
-
-	contentType := http.DetectContentType(data)
-	if contentType == "application/octet-stream" {
-		contentType = header.Header.Get(constants.HTTPHeaderContentType)
-	}
-	return Media{ContentType: contentType, Data: data}, nil
+	return Media{ContentType: contentType, Data: append(head[:n], rest...)}, nil
 }

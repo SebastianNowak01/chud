@@ -19,7 +19,11 @@ func NewPlanAPIController(service IPlanService) PlanAPIController {
 
 func (c *PlanAPIController) GetPlansByActivityHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	plans, err := c.service.GetPlansByActivity(ctx, r.PathValue("id"))
+	id, ok := httpx.PathUUIDOrRespond(w, r, "id")
+	if !ok {
+		return
+	}
+	plans, err := c.service.GetPlansByActivity(ctx, id)
 	if err != nil {
 		httpx.RespondError(ctx, w, err.Code, err.Err)
 		return
@@ -30,6 +34,10 @@ func (c *PlanAPIController) GetPlansByActivityHandler(w http.ResponseWriter, r *
 
 func (c *PlanAPIController) CreatePlanHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	id, ok := httpx.PathUUIDOrRespond(w, r, "id")
+	if !ok {
+		return
+	}
 	claims, ok := auth.ExtractUserOrRespond(ctx, w, r)
 	if !ok {
 		return
@@ -40,7 +48,7 @@ func (c *PlanAPIController) CreatePlanHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	plan, err := c.service.CreatePlan(ctx, r.PathValue("id"), claims.UserID, payload)
+	plan, err := c.service.CreatePlan(ctx, id, claims.UserID, payload)
 	if err != nil {
 		httpx.RespondError(ctx, w, err.Code, err.Err)
 		return
@@ -51,6 +59,10 @@ func (c *PlanAPIController) CreatePlanHandler(w http.ResponseWriter, r *http.Req
 
 func (c *PlanAPIController) UpdatePlanHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	id, ok := httpx.PathUUIDOrRespond(w, r, "id")
+	if !ok {
+		return
+	}
 	claims, ok := auth.ExtractUserOrRespond(ctx, w, r)
 	if !ok {
 		return
@@ -61,7 +73,7 @@ func (c *PlanAPIController) UpdatePlanHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	plan, err := c.service.UpdatePlan(ctx, r.PathValue("id"), claims.UserID, payload)
+	plan, err := c.service.UpdatePlan(ctx, id, claims.UserID, payload)
 	if err != nil {
 		httpx.RespondError(ctx, w, err.Code, err.Err)
 		return
@@ -72,12 +84,16 @@ func (c *PlanAPIController) UpdatePlanHandler(w http.ResponseWriter, r *http.Req
 
 func (c *PlanAPIController) DeletePlanHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	id, ok := httpx.PathUUIDOrRespond(w, r, "id")
+	if !ok {
+		return
+	}
 	claims, ok := auth.ExtractUserOrRespond(ctx, w, r)
 	if !ok {
 		return
 	}
 
-	if err := c.service.DeletePlan(ctx, r.PathValue("id"), claims.UserID); err != nil {
+	if err := c.service.DeletePlan(ctx, id, claims.UserID); err != nil {
 		httpx.RespondError(ctx, w, err.Code, err.Err)
 		return
 	}

@@ -2,6 +2,7 @@ import { UserTag } from '@/components/common/UserTag'
 import { Badge } from '@/components/ui/Badge'
 import { Hint } from '@/components/ui/Hint'
 import { mediaUrl, useEntryMedia } from '@/features/entries/entries-api'
+import { isMediaType } from '@/features/entries/media'
 import type { Entry } from '@/features/entries/types'
 import type { User } from '@/features/users/types'
 import { formatDate, formatDateTime } from '@/lib/dates'
@@ -29,13 +30,14 @@ export function EntryItem({ entry, user }: { entry: Entry; user: User | undefine
 
 function EntryMedia({ entryId }: { entryId: string }) {
   const media = useEntryMedia(entryId)
-  if (!media.data?.length) {
+  const items = media.data?.filter((m) => isMediaType(m.contentType)) ?? []
+  if (!items.length) {
     return null
   }
 
   return (
     <div className="flex flex-wrap gap-2">
-      {media.data.map((m) =>
+      {items.map((m) =>
         m.contentType.startsWith('video/') ? (
           <video key={m.id} src={mediaUrl(m.id)} controls preload="metadata" className={MEDIA} />
         ) : (

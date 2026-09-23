@@ -52,6 +52,7 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
             placeholder="Siłownia trzy razy w tygodniu"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            maxLength={100}
             required
           />
         </Field>
