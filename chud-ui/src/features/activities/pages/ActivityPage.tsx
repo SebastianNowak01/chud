@@ -5,6 +5,7 @@ import { UserTag } from '@/components/common/UserTag'
 import { ErrorText } from '@/components/ui/ErrorText'
 import { Hint } from '@/components/ui/Hint'
 import { useActivity, useMembers } from '@/features/activities/activities-api'
+import { ActivityGrid } from '@/features/activities/components/ActivityGrid'
 import { EntryForm, type PlannedDay } from '@/features/entries/components/EntryForm'
 import { EntryItem } from '@/features/entries/components/EntryItem'
 import { useEntries } from '@/features/entries/entries-api'
@@ -71,6 +72,8 @@ export function ActivityPage() {
           ))}
         </div>
       )}
+
+      {activity.data && <ActivityGrid activity={activity.data} entries={entries.data} error={entries.error} />}
 
       {form.kind === 'entry' && (
         <EntryForm

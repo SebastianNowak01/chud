@@ -79,6 +79,9 @@ export const groupByDay = (entries: Entry[]): Map<string, Day> => {
 // Intensity 0-4 from the number of completed entries, like GitHub.
 export const level = (done: number): number => Math.min(done, 4)
 
+export const scaledLevel = (done: number, max: number): number =>
+  max <= 4 ? level(done) : Math.ceil((4 * done) / max)
+
 export interface DayPerson {
   userId: string
   done: number

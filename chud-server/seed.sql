@@ -22,6 +22,19 @@ FROM (VALUES
 JOIN users u ON u.username = a.username
 ON CONFLICT (name) DO NOTHING;
 
+CREATE FUNCTION pg_temp.seed_description(activity TEXT) RETURNS TEXT AS $$
+    SELECT options[1 + floor(random() * array_length(options, 1))::int]
+    FROM (SELECT CASE activity
+        WHEN 'Gym' THEN ARRAY['Klata i triceps', 'Dzień nóg, ledwo schodzę po schodach', 'Plecy i biceps', 'Martwy ciąg, nowy rekord!', 'Barki, krótko ale intensywnie', 'Full body z trenerem']
+        WHEN 'Bieganie' THEN ARRAY['5 km wokół parku', 'Interwały 8x400 m', '10 km spokojnym tempem', 'Bieg w deszczu, było warto', 'Rozbieganie 3 km', 'Podbiegi na Kopcu']
+        WHEN 'Czytanie' THEN ARRAY['30 stron Wiedźmina', 'Rozdział o nawykach', 'Reportaż do poduszki', 'Skończyłem książkę!', '25 stron w tramwaju', 'Kryminał, nie mogłem się oderwać']
+        WHEN 'Angielski' THEN ARRAY['Lekcja Duolingo, seria trwa', 'Konwersacje z lektorem', 'Odcinek serialu bez napisów', 'Phrasal verbs, masakra', 'Fiszki: 40 nowych słówek', 'Podcast po angielsku']
+        WHEN 'Medytacja' THEN ARRAY['10 minut z oddechem', 'Body scan przed snem', 'Rano, zanim wszyscy wstali', 'Ciężko było się skupić', '15 minut w ciszy', 'Medytacja z aplikacją']
+        WHEN 'Bez cukru' THEN ARRAY['Odmówiłem ciastka w pracy', 'Bez słodyczy, tylko owoce', 'Herbata bez cukru, da się', 'Ominąłem automat z batonami', 'Urodziny w pracy, wytrwałem', 'Cały dzień czysto']
+        ELSE ARRAY['Zrobione']
+    END AS options) AS o
+$$ LANGUAGE sql VOLATILE;
+
 CREATE TEMP TABLE seed_plans ON COMMIT DROP AS
 SELECT gen_random_uuid() AS id, a.id AS activity_id, u.id AS user_id, p.*
 FROM (VALUES
@@ -43,7 +56,7 @@ INSERT INTO entries (id, activity_id, user_id, plan_id, scheduled_for, excused, 
 SELECT gen_random_uuid(), p.activity_id, p.user_id, p.id, d::date, r >= 0.75,
        CASE WHEN r >= 0.75
             THEN (ARRAY['Chory', 'Wyjazd służbowy', 'Kontuzja kolana', 'Urodziny babci'])[1 + floor(random() * 4)::int]
-            ELSE (ARRAY['', 'Dobra sesja', 'Ciężko dziś szło', 'Nowy rekord!', ''])[1 + floor(random() * 5)::int]
+            ELSE pg_temp.seed_description(p.activity)
        END,
        d + time '07:00' + random() * interval '12 hours'
 FROM seed_plans p
@@ -54,32 +67,44 @@ WHERE r < 0.85
 
 INSERT INTO entries (id, activity_id, user_id, description, occurred_at)
 SELECT gen_random_uuid(), a.id, u.id,
-       (ARRAY['', '', 'Szybko poszło', 'Bardzo przyjemnie', 'Na styk, ale jest', 'Zrobione z rana'])[1 + floor(random() * 6)::int],
+       pg_temp.seed_description(a.name),
        d + time '06:00' + random() * interval '16 hours'
 FROM (VALUES
-    ('Ala',  'Bieganie',  0.35),
-    ('Ala',  'Czytanie',  0.20),
-    ('Bartek',    'Angielski', 0.70),
-    ('Bartek',    'Bez cukru', 0.40),
-    ('Celina',    'Czytanie',  0.80),
-    ('Celina',    'Medytacja', 0.30),
-    ('Celina',    'Bez cukru', 0.55),
-    ('Darek',    'Medytacja', 0.60),
-    ('Darek',    'Gym',       0.15),
-    ('Darek',    'Czytanie',  0.25)
+    ('Ala',  'Bieganie',  0.15),
+    ('Ala',  'Czytanie',  0.08),
+    ('Bartek',    'Angielski', 0.30),
+    ('Bartek',    'Bez cukru', 0.12),
+    ('Celina',    'Czytanie',  0.30),
+    ('Celina',    'Medytacja', 0.10),
+    ('Celina',    'Bez cukru', 0.15),
+    ('Darek',    'Medytacja', 0.20),
+    ('Darek',    'Gym',       0.05),
+    ('Darek',    'Czytanie',  0.10)
 ) AS h(username, activity, chance)
 JOIN users u ON u.username = h.username
 JOIN activities a ON a.name = h.activity
 CROSS JOIN generate_series(CURRENT_DATE - 120, CURRENT_DATE, interval '1 day') AS d
-WHERE random() < h.chance;
+CROSS JOIN LATERAL (SELECT random() AS r WHERE d IS NOT NULL AND h.chance IS NOT NULL) AS roll
+WHERE r < h.chance;
 
 INSERT INTO entries (id, activity_id, user_id, description, occurred_at)
-SELECT gen_random_uuid(), e.activity_id, e.user_id, 'Druga runda', e.occurred_at + interval '2 hours'
+SELECT gen_random_uuid(), e.activity_id, e.user_id, 'Druga runda: ' || lower(pg_temp.seed_description(a.name)), e.occurred_at + interval '2 hours'
 FROM entries e
+JOIN activities a ON a.id = e.activity_id
 JOIN users u ON u.id = e.user_id
 WHERE u.username IN ('Ala', 'Bartek', 'Celina', 'Darek')
   AND e.plan_id IS NULL
-  AND random() < 0.15;
+  AND random() + 0 * extract(epoch FROM e.occurred_at) < 0.08;
+
+UPDATE entries e
+SET occurred_at = LEAST(e.occurred_at, now() - random() * interval '1 hour')
+FROM users u
+WHERE u.id = e.user_id AND u.username IN ('Ala', 'Bartek', 'Celina', 'Darek');
+
+UPDATE entries e
+SET created_at = LEAST(e.occurred_at + random() * interval '36 hours', now())
+FROM users u
+WHERE u.id = e.user_id AND u.username IN ('Ala', 'Bartek', 'Celina', 'Darek');
 
 COMMIT;
 

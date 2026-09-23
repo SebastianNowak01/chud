@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { DrawablyBadge, DrawablyButton } from 'drawably/react'
+import { DrawablyButton } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
+import { Badge } from '@/components/ui/Badge'
 import { ErrorText } from '@/components/ui/ErrorText'
 import { Hint } from '@/components/ui/Hint'
 import { useDeleteUser } from '@/features/users/users-api'
@@ -20,7 +21,7 @@ export function UserRow({ user, onEdit }: UserRowProps) {
   return (
     <tr>
       <td>
-        <UserTag user={user} /> {user.isAdmin && <DrawablyBadge>admin</DrawablyBadge>}
+        <UserTag user={user} /> {user.isAdmin && <Badge tone="accent">admin</Badge>}
       </td>
       <td>{formatDateTime(user.createdAt)}</td>
       <td className="text-right">
