@@ -4,7 +4,7 @@ import { Hint } from '@/components/ui/Hint'
 import { mediaUrl, useEntryMedia } from '@/features/entries/entries-api'
 import type { Entry } from '@/features/entries/types'
 import type { User } from '@/features/users/types'
-import { apiDate, formatDate, formatDateTime } from '@/lib/dates'
+import { formatDate, formatDateTime } from '@/lib/dates'
 
 const MEDIA = 'block w-full max-w-full rounded-lg sm:max-h-[200px] sm:w-auto'
 
@@ -14,10 +14,10 @@ export function EntryItem({ entry, user }: { entry: Entry; user: User | undefine
       <div className="flex flex-wrap items-center gap-3">
         <UserTag user={user} />
         <Hint as="span">{formatDateTime(entry.occurredAt)}</Hint>
-        <Hint as="span">added {formatDateTime(entry.createdAt)}</Hint>
+        <Hint as="span">dodano {formatDateTime(entry.createdAt)}</Hint>
         {entry.scheduledFor && (
           <Badge tone={entry.excused ? 'excused' : 'done'}>
-            {entry.excused ? 'excused' : 'planned'} {formatDate(apiDate(entry.scheduledFor))}
+            {entry.excused ? 'wymówka' : 'plan'} {formatDate(entry.scheduledFor)}
           </Badge>
         )}
       </div>

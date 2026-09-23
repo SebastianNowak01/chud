@@ -27,26 +27,30 @@ export function AppLayout() {
   }
 
   return (
-    <div className="mx-auto flex max-w-[960px] flex-col gap-2 px-3 pt-4 pb-12 sm:gap-3 sm:px-4 sm:pt-6 sm:pb-16">
+    <div className="mx-auto flex max-w-[1120px] flex-col gap-2 px-3 pt-4 pb-12 sm:gap-3 sm:px-4 sm:pt-6 sm:pb-16">
+      <figure className="m-0 text-center text-muted italic">
+        <blockquote className="m-0 inline">„bez wymówek”</blockquote>
+        <figcaption className="inline"> — Radek Słodkiewicz</figcaption>
+      </figure>
       <header className="flex flex-wrap items-center justify-between gap-4">
         <nav className="flex flex-wrap items-center gap-3.5 sm:gap-5">
           <Logo size="small" linked />
           <Link to="/activities" {...NAV_LINK}>
-            Activities
+            Pulpit
           </Link>
           <Link to="/profile" {...NAV_LINK}>
-            Profile
+            Profil
           </Link>
           {session.is_admin && (
             <Link to="/users" {...NAV_LINK}>
-              Users
+              Użytkownicy
             </Link>
           )}
         </nav>
         <div className="flex items-center gap-3 text-muted">
           {me.data ? <UserTag user={me.data} /> : <span>{session.username}</span>}
           <DrawablyButton tone="neutral" onClick={logout}>
-            Log out
+            Wyloguj
           </DrawablyButton>
         </div>
       </header>

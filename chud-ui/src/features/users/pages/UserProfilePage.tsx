@@ -1,0 +1,86 @@
+import { getRouteApi, Link } from '@tanstack/react-router'
+import { DrawablyUnderline } from 'drawably/react'
+import { Card } from '@/components/ui/Card'
+import { ErrorText } from '@/components/ui/ErrorText'
+import { Hint } from '@/components/ui/Hint'
+import { useLeaderboard } from '@/features/stats/stats-api'
+import { UserActivityGrid } from '@/features/users/components/UserActivityGrid'
+import { useUsers } from '@/features/users/users-api'
+import { LOCALE } from '@/lib/dates'
+import { useGridRange } from '@/lib/use-grid-range'
+
+const userRoute = getRouteApi('/_authenticated/users/$userId')
+
+export function UserProfilePage() {
+  const { userId } = userRoute.useParams()
+  const { session } = userRoute.useRouteContext()
+  const users = useUsers()
+  const { range, setRange, layout } = useGridRange('grid:user')
+  const leaderboard = useLeaderboard(layout.firstDay, layout.lastDay)
+
+  const user = users.data?.find((u) => u.id === userId)
+  const place = leaderboard.data?.findIndex((s) => s.userId === userId) ?? -1
+  const stats = place >= 0 ? leaderboard.data?.[place] : undefined
+
+  if (users.error) {
+    return <ErrorText>{users.error.message}</ErrorText>
+  }
+  if (users.data && !user) {
+    return <ErrorText>Nie znaleziono użytkownika.</ErrorText>
+  }
+  if (!user) {
+    return <Hint>Ładowanie…</Hint>
+  }
+
+  const memberSince = new Date(user.createdAt).toLocaleDateString(LOCALE, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+  const tiles = stats
+    ? [
+        { label: 'miejsce', value: `${place + 1}.` },
+        { label: 'punkty', value: stats.points },
+        { label: 'zrobione', value: stats.done },
+        { label: 'poza planem', value: stats.extra },
+        { label: 'wymówki', value: stats.excused },
+        { label: 'opuszczone', value: stats.missed },
+        { label: 'skuteczność', value: stats.rate === null ? '–' : `${Math.round(stats.rate * 100)}%` },
+      ]
+    : []
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1.5">
+          <h2 className="text-[32px] wrap-anywhere" style={{ color: user.color }}>
+            <DrawablyUnderline stroke={user.color}>{user.username}</DrawablyUnderline>
+          </h2>
+          <Hint as="span">
+            {user.isAdmin ? 'Admin · ' : ''}w grupie od {memberSince}
+          </Hint>
+        </div>
+        {session.user_id === user.id && (
+          <Link to="/profile" className="text-[14px] text-muted">
+            Edytuj swój profil →
+          </Link>
+        )}
+      </div>
+
+      <Card size="lg" className="flex flex-col gap-3">
+        <h3>Statystyki</h3>
+        {leaderboard.error && <ErrorText>{leaderboard.error.message}</ErrorText>}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
+          {tiles.map((tile) => (
+            <div key={tile.label} className="flex flex-col">
+              <span className="text-[26px] font-semibold">{tile.value}</span>
+              <Hint as="span">{tile.label}</Hint>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <UserActivityGrid user={user} range={range} onRangeChange={setRange} layout={layout} />
+    </div>
+  )
+}

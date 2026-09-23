@@ -12,7 +12,6 @@ type IActivityDAO interface {
 	GetAllActivities(ctx context.Context) ([]Activity, error)
 	GetActivityByID(ctx context.Context, id string) (*Activity, error)
 	InsertActivity(ctx context.Context, activity *Activity) (*Activity, error)
-	// GetMembers returns the users who posted at least one entry in the activity.
 	GetMembers(ctx context.Context, activityID string) ([]users.User, error)
 }
 

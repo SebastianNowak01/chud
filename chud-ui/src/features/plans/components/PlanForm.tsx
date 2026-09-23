@@ -45,17 +45,17 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
   return (
     <Card>
       <form className="flex flex-col gap-4" onSubmit={submit}>
-        <h2>New plan</h2>
-        <Field label="Goal" htmlFor="plan-title">
+        <h2>Nowy plan</h2>
+        <Field label="Cel" htmlFor="plan-title">
           <DrawablyInput
             id="plan-title"
-            placeholder="Gym three times a week"
+            placeholder="Siłownia trzy razy w tygodniu"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
           />
         </Field>
-        <Field label="Days">
+        <Field label="Dni">
           <div className="flex flex-wrap items-center gap-3">
             {WEEKDAYS.map(({ key, label }) => (
               <label key={key} className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 sm:min-h-0">
@@ -66,7 +66,7 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
           </div>
         </Field>
         <div className="flex flex-wrap items-center gap-3">
-          <Field label="From" htmlFor="plan-starts-on" className="flex-[1_1_140px] sm:flex-initial">
+          <Field label="Od" htmlFor="plan-starts-on" className="flex-[1_1_140px] sm:flex-initial">
             <DrawablyInput
               id="plan-starts-on"
               type="date"
@@ -75,7 +75,7 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
               required
             />
           </Field>
-          <Field label="Until (optional)" htmlFor="plan-ends-on" className="flex-[1_1_140px] sm:flex-initial">
+          <Field label="Do (opcjonalnie)" htmlFor="plan-ends-on" className="flex-[1_1_140px] sm:flex-initial">
             <DrawablyInput
               id="plan-ends-on"
               type="date"
@@ -88,10 +88,10 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
         {createPlan.error && <ErrorText>{createPlan.error.message}</ErrorText>}
         <div className="flex flex-wrap items-center gap-3">
           <DrawablyButton type="submit" variant="solid" state={buttonState(createPlan.status)}>
-            Create
+            Utwórz
           </DrawablyButton>
           <DrawablyButton type="button" tone="neutral" onClick={onDone}>
-            Cancel
+            Anuluj
           </DrawablyButton>
         </div>
       </form>

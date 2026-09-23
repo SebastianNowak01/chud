@@ -18,10 +18,10 @@ export function UsersPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2>Users</h2>
+        <h2>Użytkownicy</h2>
         {form.mode === 'closed' && (
           <DrawablyButton variant="solid" onClick={() => setForm({ mode: 'create' })}>
-            Add user
+            Dodaj użytkownika
           </DrawablyButton>
         )}
       </div>
@@ -35,15 +35,15 @@ export function UsersPage() {
       )}
 
       <Card>
-        {users.isPending && <Hint>Loading…</Hint>}
+        {users.isPending && <Hint>Ładowanie…</Hint>}
         {users.error && <ErrorText>{users.error.message}</ErrorText>}
         {users.data && (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse [&_td]:border-b [&_td]:border-dashed [&_td]:border-rule [&_td]:px-2 [&_td]:py-2.5 [&_td]:text-left [&_td]:whitespace-nowrap [&_th]:border-b [&_th]:border-dashed [&_th]:border-rule [&_th]:px-2 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-[13px] [&_th]:font-semibold [&_th]:whitespace-nowrap [&_th]:text-muted">
               <thead>
                 <tr>
-                  <th>Username</th>
-                  <th>Created</th>
+                  <th>Nazwa</th>
+                  <th>Utworzono</th>
                   <th />
                 </tr>
               </thead>

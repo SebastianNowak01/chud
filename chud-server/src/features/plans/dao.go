@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/sebnow/chud/platform/clock"
 	"github.com/sebnow/chud/platform/db"
 )
 
@@ -13,6 +14,7 @@ type IPlanDAO interface {
 	InsertPlan(ctx context.Context, plan *Plan) (*Plan, error)
 	UpdatePlan(ctx context.Context, plan *Plan) (*Plan, error)
 	DeletePlan(ctx context.Context, id string) error
+	GetLastScheduledFor(ctx context.Context, planID string) (*clock.Date, error)
 }
 
 type PlanDAO struct {
@@ -69,20 +71,20 @@ func (r *PlanDAO) UpdatePlan(ctx context.Context, plan *Plan) (*Plan, error) {
 		return db.GetOne[Plan](
 			ctx,
 			r.pool,
-			`UPDATE plans
-			SET title = $2,
-				monday = $3, tuesday = $4, wednesday = $5, thursday = $6,
-				friday = $7, saturday = $8, sunday = $9,
-				starts_on = $10, ends_on = $11
-			WHERE id = $1
-			RETURNING *`,
-			plan.ID, plan.Title,
-			plan.Monday, plan.Tuesday, plan.Wednesday, plan.Thursday, plan.Friday, plan.Saturday, plan.Sunday,
-			plan.StartsOn, plan.EndsOn,
+			`UPDATE plans SET title = $2, ends_on = $3 WHERE id = $1 RETURNING *`,
+			plan.ID, plan.Title, plan.EndsOn,
 		)
 	})
 }
 
 func (r *PlanDAO) DeletePlan(ctx context.Context, id string) error {
 	return db.WrapExec(ctx, "DeletePlan", r.pool, `DELETE FROM plans WHERE id = $1`, id)
+}
+
+func (r *PlanDAO) GetLastScheduledFor(ctx context.Context, planID string) (*clock.Date, error) {
+	return db.Wrap(ctx, "GetLastScheduledFor", func() (*clock.Date, error) {
+		var last *clock.Date
+		err := sqlx.GetContext(ctx, r.pool, &last, `SELECT max(scheduled_for) FROM entries WHERE plan_id = $1`, planID)
+		return last, err
+	})
 }

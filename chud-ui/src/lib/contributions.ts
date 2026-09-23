@@ -4,9 +4,9 @@ import { addDays, toDateString } from '@/lib/dates'
 export type GridRange = 'month' | 'quarter' | 'year'
 
 export const GRID_RANGES: { value: GridRange; label: string; months: number }[] = [
-  { value: 'month', label: 'Month', months: 1 },
-  { value: 'quarter', label: '3 months', months: 3 },
-  { value: 'year', label: 'Year', months: 12 },
+  { value: 'month', label: 'Miesiąc', months: 1 },
+  { value: 'quarter', label: '3 miesiące', months: 3 },
+  { value: 'year', label: 'Rok', months: 12 },
 ]
 
 // What one user did in one activity on one day.
@@ -20,6 +20,7 @@ export interface DayItem {
 export interface Day {
   date: string // YYYY-MM-DD, local
   items: DayItem[]
+  entries: Entry[]
   done: number
   excused: number
 }
@@ -27,6 +28,8 @@ export interface Day {
 export interface GridLayout {
   from: Date // local midnight of the first Monday
   to: Date // local midnight after today
+  firstDay: string // YYYY-MM-DD of from
+  lastDay: string // YYYY-MM-DD of today
   weeks: string[][] // columns of 7 dates, Monday first
 }
 
@@ -45,7 +48,7 @@ export const gridLayout = (range: GridRange, today: Date = new Date()): GridLayo
   for (let monday = from; monday < to; monday = addDays(monday, 7)) {
     weeks.push(Array.from({ length: 7 }, (_, i) => toDateString(addDays(monday, i))))
   }
-  return { from: startOfDay(from), to, weeks }
+  return { from: startOfDay(from), to, firstDay: toDateString(from), lastDay: toDateString(today), weeks }
 }
 
 // Groups entries by local day, then by user and activity.
@@ -55,9 +58,11 @@ export const groupByDay = (entries: Entry[]): Map<string, Day> => {
     const date = toDateString(new Date(entry.occurredAt))
     let day = days.get(date)
     if (!day) {
-      day = { date, items: [], done: 0, excused: 0 }
+      day = { date, items: [], entries: [], done: 0, excused: 0 }
       days.set(date, day)
     }
+
+    day.entries.push(entry)
 
     let item = day.items.find((i) => i.userId === entry.userId && i.activityId === entry.activityId)
     if (!item) {
@@ -72,6 +77,9 @@ export const groupByDay = (entries: Entry[]): Map<string, Day> => {
       item.done++
       day.done++
     }
+  }
+  for (const day of days.values()) {
+    day.entries.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
   }
   return days
 }

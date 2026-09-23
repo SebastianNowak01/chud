@@ -18,7 +18,7 @@ import {
   type GridLayout,
   type GridRange,
 } from '@/lib/contributions'
-import { formatDate, formatMonth, toDateString } from '@/lib/dates'
+import { formatDate, formatMonth, formatTime, toDateString } from '@/lib/dates'
 
 // The grid is one SVG drawn in "units"; each range renders a unit at a fixed pixel size,
 // and on narrow screens the whole SVG scales down instead of scrolling.
@@ -31,7 +31,7 @@ const PX_PER_UNIT: Record<GridRange, number> = { month: 1.5, quarter: 1.2, year:
 // Pen stroke per intensity level 1-4: heavier and darker the more was done.
 const LEVEL_STROKE = [0, 1.6, 2.4, 3.2, 4.2]
 const LEVEL_OPACITY = [0, 0.45, 0.65, 0.85, 1]
-const DAY_LABELS = ['Mon', '', 'Wed', '', 'Fri', '', '']
+const DAY_LABELS = ['Pn', '', 'Śr', '', 'Pt', '', '']
 
 // 'single' colors every day with one color; 'people' splits a day into stripes of each active person's color.
 export type GridColoring = { kind: 'single'; color: string } | { kind: 'people' }
@@ -218,7 +218,7 @@ export function ContributionGrid({
       <div className="flex flex-wrap items-center justify-between gap-4 [&_select]:min-h-11">
         <h3 className="flex-1">{title}</h3>
         <DrawablySelect
-          aria-label="Range"
+          aria-label="Zakres"
           value={range}
           onChange={(e) => onRangeChange(e.target.value as GridRange)}
         >
@@ -253,7 +253,7 @@ export function ContributionGrid({
             week.map((date, weekday) => {
               const day = days.get(date)
               const isFuture = date > today
-              const summary = day ? `${day.done} done${day.excused ? `, ${day.excused} excused` : ''}` : 'nothing'
+              const summary = day ? `zrobione: ${day.done}${day.excused ? `, wymówki: ${day.excused}` : ''}` : 'nic'
 
               return (
                 <g key={date} transform={`translate(${LABEL_WIDTH + col * STEP} ${HEADER_HEIGHT + weekday * STEP})`}>
@@ -305,6 +305,7 @@ export function ContributionGrid({
 
       <Legend />
 
+      <p className="m-0 font-semibold">{formatDate(selected)}</p>
       <DayPeople
         day={days.get(selected)}
         usersById={usersById}
@@ -325,15 +326,15 @@ function Legend() {
 
   return (
     <div className="flex flex-wrap items-center gap-1 text-[11px] text-muted">
-      <span>less</span>
+      <span>mniej</span>
       <svg viewBox={`0 0 ${5 * STEP - 4} ${CELL}`} className="h-[11px] w-auto">
         {samples.map((stripes, i) => legendCell(`legend-${i}`, stripes, i))}
       </svg>
-      <span>more</span>
+      <span>więcej</span>
       <svg viewBox={`0 0 ${CELL} ${CELL}`} className="ml-2 size-[11px]">
         <SketchCell seedKey="legend-excused" stripes={[{ color: 'var(--color-ink)', level: 0 }]} />
       </svg>
-      <span>excused</span>
+      <span>wymówka</span>
     </div>
   )
 }
@@ -378,20 +379,25 @@ interface DayPeopleProps {
 }
 
 function DayPeople({ day, usersById, activitiesById, showActivities, compact = false }: DayPeopleProps) {
-  if (!day?.items.length) {
-    return <Hint className="m-0">Nothing logged.</Hint>
+  if (!day?.entries.length) {
+    return <Hint className="m-0">Nic nie zapisano.</Hint>
   }
   return (
     <ul className="m-0 list-none p-0">
-      {day.items.map((item) => (
+      {day.entries.map((entry) => (
         <li
-          key={`${item.userId}-${item.activityId}`}
-          className={`flex flex-wrap items-center gap-2 border-t border-dashed border-rule ${compact ? 'py-1' : 'min-h-11'}`}
+          key={entry.id}
+          className={`flex flex-wrap items-center gap-x-2 border-t border-dashed border-rule ${compact ? 'py-1' : 'min-h-11 py-1.5'}`}
         >
-          <UserTag user={usersById.get(item.userId)} />
-          {showActivities && <span>{activitiesById.get(item.activityId)?.name ?? 'activity'}</span>}
-          {item.done > 1 && <Hint as="span">×{item.done}</Hint>}
-          {item.excused > 0 && <Hint as="span">excused{item.excused > 1 ? ` ×${item.excused}` : ''}</Hint>}
+          <span className="text-[13px] text-muted tabular-nums">{formatTime(entry.occurredAt)}</span>
+          <UserTag user={usersById.get(entry.userId)} />
+          {showActivities && <span>{activitiesById.get(entry.activityId)?.name ?? 'aktywność'}</span>}
+          {entry.excused && <Hint as="span">wymówka</Hint>}
+          {entry.description && (
+            <Hint as="span" className={compact ? 'w-full truncate' : 'w-full sm:w-auto'}>
+              {entry.description}
+            </Hint>
+          )}
         </li>
       ))}
     </ul>

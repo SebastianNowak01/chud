@@ -3,11 +3,14 @@ package httpx
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/sebnow/chud/platform/constants"
 	"github.com/sebnow/chud/platform/log"
 )
+
+const maxJSONBodySize = 1 << 20
 
 func RespondJSON(ctx context.Context, w http.ResponseWriter, statusCode int, data any) {
 	logger := log.FromContext(ctx)
@@ -20,37 +23,23 @@ func RespondJSON(ctx context.Context, w http.ResponseWriter, statusCode int, dat
 	}
 }
 
-type simpleResponse struct {
-	Message string `json:"message"`
-}
-
 type errorResponse struct {
 	Message string `json:"message"`
 }
 
-func RespondMessage(ctx context.Context, w http.ResponseWriter, statusCode int, message string) {
-	logger := log.FromContext(ctx)
-	w.Header().Set(constants.HTTPHeaderContentType, constants.HTTPContentTypeJSON)
-	w.WriteHeader(statusCode)
-
-	response := simpleResponse{Message: message}
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logger.Error().Err(err).Msg("Failed to encode JSON response")
-	}
-}
-
 func RespondError(ctx context.Context, w http.ResponseWriter, statusCode int, err error) {
 	logger := log.FromContext(ctx)
-	logger.Error().Err(err).Msg("Responding with error")
+	if statusCode >= http.StatusInternalServerError {
+		logger.Error().Err(err).Int("status", statusCode).Msg("Responding with error")
+	} else {
+		logger.Debug().Err(err).Int("status", statusCode).Msg("Responding with error")
+	}
 
 	w.Header().Set(constants.HTTPHeaderContentType, constants.HTTPContentTypeJSON)
 	w.WriteHeader(statusCode)
 
 	message := err.Error()
-
-	// Obfuscate internal server error messages
-	if statusCode == http.StatusInternalServerError {
+	if statusCode >= http.StatusInternalServerError {
 		message = "Internal server error"
 	}
 
@@ -64,12 +53,16 @@ func RespondError(ctx context.Context, w http.ResponseWriter, statusCode int, er
 	}
 }
 
-// DecodeJSONOrRespond decodes JSON from the request body into v, or writes a 400 response and returns false.
 func DecodeJSONOrRespond(ctx context.Context, w http.ResponseWriter, r *http.Request, v any) bool {
-	decoder := json.NewDecoder(r.Body)
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxJSONBodySize))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(v); err != nil {
-		RespondError(ctx, w, http.StatusBadRequest, err)
+		log.FromContext(ctx).Debug().Err(err).Msg("Invalid JSON body")
+		if _, tooLarge := errors.AsType[*http.MaxBytesError](err); tooLarge {
+			RespondError(ctx, w, http.StatusRequestEntityTooLarge, errors.New("żądanie jest za duże"))
+			return false
+		}
+		RespondError(ctx, w, http.StatusBadRequest, errors.New("nieprawidłowe dane żądania"))
 		return false
 	}
 	return true

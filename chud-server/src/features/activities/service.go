@@ -54,7 +54,7 @@ func (s *ActivityService) CreateActivity(
 ) (*Activity, *apperr.ServiceError) {
 	name := strings.TrimSpace(payload.Name)
 	if name == "" || len(name) > maxNameLength {
-		return nil, apperr.NewBadRequestError("name must be between 1 and %d characters", maxNameLength)
+		return nil, apperr.NewBadRequestError("nazwa musi mieć od 1 do %d znaków", maxNameLength)
 	}
 
 	activity, err := s.dao.InsertActivity(ctx, &Activity{

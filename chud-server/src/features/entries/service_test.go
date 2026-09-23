@@ -8,6 +8,7 @@ import (
 
 	"github.com/sebnow/chud/features/activities"
 	"github.com/sebnow/chud/features/plans"
+	"github.com/sebnow/chud/platform/clock"
 	"github.com/sebnow/chud/platform/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,8 +29,7 @@ func (fakePlanDAO) GetPlanByID(_ context.Context, id string) (*plans.Plan, error
 	if id != "alice-gym" {
 		return nil, db.ErrNotFound
 	}
-	startsOn, _ := time.Parse(time.DateOnly, "2026-09-21")
-	return &plans.Plan{ID: id, ActivityID: "gym", UserID: "alice", Monday: true, StartsOn: startsOn}, nil
+	return &plans.Plan{ID: id, ActivityID: "gym", UserID: "alice", Monday: true, StartsOn: *date("2026-09-21")}, nil
 }
 
 type fakeEntryDAO struct {
@@ -38,17 +38,27 @@ type fakeEntryDAO struct {
 	media   []Media
 }
 
-func (d *fakeEntryDAO) InsertEntry(_ context.Context, entry *Entry, media []Media) (*Entry, error) {
+func (d *fakeEntryDAO) InsertEntry(_ context.Context, entry *Entry) (*Entry, error) {
 	for _, e := range d.entries {
 		if e.PlanID != nil && entry.PlanID != nil && *e.PlanID == *entry.PlanID &&
-			e.ScheduledFor.Equal(*entry.ScheduledFor) {
+			*e.ScheduledFor == *entry.ScheduledFor {
 			return nil, db.ErrAlreadyExists
 		}
 	}
 	d.entries = append(d.entries, *entry)
-	d.media = append(d.media, media...)
 	return entry, nil
 }
+
+func (d *fakeEntryDAO) InsertMedia(_ context.Context, _ string, media []Media) error {
+	d.media = append(d.media, media...)
+	return nil
+}
+
+type fakeDB struct{}
+
+func (fakeDB) Querier() db.Querier { return nil }
+
+func (fakeDB) WithTx(_ context.Context, fn func(q db.Querier) error) error { return fn(nil) }
 
 func (d *fakeEntryDAO) GetEntriesInRange(_ context.Context, from, to time.Time) ([]Entry, error) {
 	var result []Entry
@@ -74,16 +84,21 @@ func (d *fakeEntryDAO) GetUserEntriesInRange(ctx context.Context, userID string,
 func newTestService() (*EntryService, *fakeEntryDAO) {
 	dao := &fakeEntryDAO{}
 	return NewEntryService(EntryServiceDeps{
-		EntryDAO:    dao,
+		DB:          fakeDB{},
+		NewEntryDAO: func(db.Querier) IEntryDAO { return dao },
 		ActivityDAO: fakeActivityDAO{},
 		PlanDAO:     fakePlanDAO{},
+		Clock:       clock.Fixed(time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)),
 	}), dao
 }
 
 func ptr[T any](v T) *T { return &v }
 
-func date(s string) *time.Time {
-	d, _ := time.Parse(time.DateOnly, s)
+func date(s string) *clock.Date {
+	d, err := clock.ParseDate(s)
+	if err != nil {
+		panic(err)
+	}
 	return &d
 }
 
@@ -105,9 +120,14 @@ func TestCreatePlannedEntries(t *testing.T) {
 	svc, _ := newTestService()
 
 	_, svcErr := svc.CreateEntry(ctx, "gym", "alice", CreateEntryPayload{
-		PlanID: ptr("alice-gym"), ScheduledFor: date("2026-09-21"),
+		PlanID: ptr("alice-gym"), ScheduledFor: date("2026-09-21"), OccurredAt: time.Date(2026, 9, 21, 18, 0, 0, 0, time.UTC),
 	})
 	require.Nil(t, svcErr)
+
+	_, svcErr = svc.CreateEntry(ctx, "gym", "alice", CreateEntryPayload{
+		PlanID: ptr("alice-gym"), ScheduledFor: date("2026-10-12"), Excused: true, Description: "trip",
+	})
+	require.Nil(t, svcErr, "excuses can be filed ahead")
 
 	_, svcErr = svc.CreateEntry(ctx, "gym", "alice", CreateEntryPayload{
 		PlanID: ptr("alice-gym"), ScheduledFor: date("2026-09-28"), Excused: true, Description: "sick",
@@ -115,7 +135,7 @@ func TestCreatePlannedEntries(t *testing.T) {
 	require.Nil(t, svcErr)
 
 	_, svcErr = svc.CreateEntry(ctx, "gym", "alice", CreateEntryPayload{
-		PlanID: ptr("alice-gym"), ScheduledFor: date("2026-09-21"),
+		PlanID: ptr("alice-gym"), ScheduledFor: date("2026-09-21"), OccurredAt: time.Date(2026, 9, 21, 19, 0, 0, 0, time.UTC),
 	})
 	require.NotNil(t, svcErr)
 	assert.Equal(t, http.StatusConflict, svcErr.Code, "day already resolved")
@@ -137,6 +157,9 @@ func TestCreateEntryValidation(t *testing.T) {
 		{"plan of other activity", "walk", "alice", CreateEntryPayload{PlanID: ptr("alice-gym"), ScheduledFor: date("2026-09-21")}, http.StatusBadRequest},
 		{"plan without day", "gym", "alice", CreateEntryPayload{PlanID: ptr("alice-gym")}, http.StatusBadRequest},
 		{"day not planned", "gym", "alice", CreateEntryPayload{PlanID: ptr("alice-gym"), ScheduledFor: date("2026-09-22")}, http.StatusBadRequest},
+		{"planned day done on another day", "gym", "alice", CreateEntryPayload{PlanID: ptr("alice-gym"), ScheduledFor: date("2026-09-21"), OccurredAt: time.Date(2026, 9, 25, 9, 0, 0, 0, time.UTC)}, http.StatusBadRequest},
+		{"future planned day done now", "gym", "alice", CreateEntryPayload{PlanID: ptr("alice-gym"), ScheduledFor: date("2026-10-12")}, http.StatusBadRequest},
+		{"entry in the future", "gym", "bob", CreateEntryPayload{OccurredAt: time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)}, http.StatusBadRequest},
 		{"excuse without description", "gym", "alice", CreateEntryPayload{PlanID: ptr("alice-gym"), ScheduledFor: date("2026-09-21"), Excused: true}, http.StatusBadRequest},
 		{"not a media file", "gym", "bob", CreateEntryPayload{Files: []Media{{ContentType: "application/pdf"}}}, http.StatusBadRequest},
 		{"file too big", "gym", "bob", CreateEntryPayload{Files: []Media{{ContentType: "image/png", Data: make([]byte, MaxFileSize+1)}}}, http.StatusBadRequest},
@@ -161,35 +184,36 @@ func TestGetEntriesInRange(t *testing.T) {
 	}
 
 	for _, e := range []struct{ user, at string }{
-		{"alice", "2026-09-01T00:00:00Z"}, // exactly from: included
+		{"alice", "2026-09-01T00:00:00Z"},
 		{"bob", "2026-09-15T12:00:00Z"},
-		{"alice", "2026-10-01T00:00:00Z"}, // exactly to: excluded
+		{"alice", "2026-09-30T23:59:59Z"},
+		{"alice", "2026-10-01T00:00:00Z"},
 	} {
 		_, svcErr := svc.CreateEntry(ctx, "gym", e.user, CreateEntryPayload{OccurredAt: at(e.at)})
 		require.Nil(t, svcErr)
 	}
 
-	from, to := at("2026-09-01T00:00:00Z"), at("2026-10-01T00:00:00Z")
+	from, to := *date("2026-09-01"), *date("2026-09-30")
 
 	all, svcErr := svc.GetEntriesInRange(ctx, from, to)
 	require.Nil(t, svcErr)
-	assert.Len(t, all, 2)
+	assert.Len(t, all, 3, "both days are included, the day after is not")
 
 	mine, svcErr := svc.GetUserEntriesInRange(ctx, "alice", from, to)
 	require.Nil(t, svcErr)
-	require.Len(t, mine, 1)
+	require.Len(t, mine, 2)
 	assert.Equal(t, "alice", mine[0].UserID)
 }
 
 func TestGetEntriesInRangeValidation(t *testing.T) {
 	svc, _ := newTestService()
-	now := time.Now()
+	today := *date("2026-10-05")
 
-	_, svcErr := svc.GetEntriesInRange(context.Background(), now, now.Add(-time.Hour))
+	_, svcErr := svc.GetEntriesInRange(context.Background(), today, today.AddDays(-1))
 	require.NotNil(t, svcErr)
 	assert.Equal(t, http.StatusBadRequest, svcErr.Code, "reversed range")
 
-	_, svcErr = svc.GetEntriesInRange(context.Background(), now.AddDate(-2, 0, 0), now)
+	_, svcErr = svc.GetEntriesInRange(context.Background(), today.AddDays(-2*365), today)
 	require.NotNil(t, svcErr)
 	assert.Equal(t, http.StatusBadRequest, svcErr.Code, "range too long")
 }

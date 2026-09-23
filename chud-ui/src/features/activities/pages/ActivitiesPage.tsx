@@ -6,31 +6,40 @@ import { ErrorText } from '@/components/ui/ErrorText'
 import { ActivityForm } from '@/features/activities/components/ActivityForm'
 import { GroupActivityGrid } from '@/features/activities/components/GroupActivityGrid'
 import { useActivities } from '@/features/activities/activities-api'
+import { Leaderboard } from '@/features/dashboard/components/Leaderboard'
+import { useGridRange } from '@/lib/use-grid-range'
 
 export function ActivitiesPage() {
   const activities = useActivities()
+  const { range, setRange, layout } = useGridRange('grid:group')
   const [creating, setCreating] = useState(false)
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-[26px] sm:text-[32px]">Activities</h2>
+        <h2 className="text-[26px] sm:text-[32px]">Pulpit</h2>
         {!creating && (
           <DrawablyButton variant="solid" onClick={() => setCreating(true)}>
-            New activity
+            Nowa aktywność
           </DrawablyButton>
         )}
       </div>
 
       {creating && <ActivityForm onDone={() => setCreating(false)} />}
 
-      <GroupActivityGrid size="lg" />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <GroupActivityGrid range={range} onRangeChange={setRange} layout={layout} size="lg" />
+        <Leaderboard from={layout.firstDay} to={layout.lastDay} range={range} onRangeChange={setRange} />
+      </div>
 
-      {activities.isPending && <p className="text-[15px] text-muted">Loading…</p>}
+      <h3 className="text-[22px]">Aktywności</h3>
+      {activities.isPending && <p className="text-[15px] text-muted">Ładowanie…</p>}
       {activities.error && <ErrorText>{activities.error.message}</ErrorText>}
-      {activities.data?.length === 0 && <p className="text-[15px] text-muted">No activities yet. Create the first one.</p>}
+      {activities.data?.length === 0 && (
+        <p className="text-[15px] text-muted">Nie ma jeszcze aktywności. Utwórz pierwszą.</p>
+      )}
 
-      <div className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {activities.data?.map((activity) => (
           <Link
             key={activity.id}

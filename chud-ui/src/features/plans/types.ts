@@ -18,14 +18,19 @@ export interface Plan {
 export type Weekday = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
 
 export const WEEKDAYS: { key: Weekday; label: string }[] = [
-  { key: 'monday', label: 'Mon' },
-  { key: 'tuesday', label: 'Tue' },
-  { key: 'wednesday', label: 'Wed' },
-  { key: 'thursday', label: 'Thu' },
-  { key: 'friday', label: 'Fri' },
-  { key: 'saturday', label: 'Sat' },
-  { key: 'sunday', label: 'Sun' },
+  { key: 'monday', label: 'Pn' },
+  { key: 'tuesday', label: 'Wt' },
+  { key: 'wednesday', label: 'Śr' },
+  { key: 'thursday', label: 'Cz' },
+  { key: 'friday', label: 'Pt' },
+  { key: 'saturday', label: 'Sb' },
+  { key: 'sunday', label: 'Nd' },
 ]
+
+export interface PlanUpdatePayload {
+  title?: string
+  endsOn?: string
+}
 
 export type PlanPayload = Pick<Plan, 'title' | Weekday> & {
   startsOn: string // YYYY-MM-DD

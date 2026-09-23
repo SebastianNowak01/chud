@@ -5,7 +5,7 @@ import { ErrorText } from '@/components/ui/ErrorText'
 import { Field } from '@/components/ui/Field'
 import { useCreateEntry } from '@/features/entries/entries-api'
 import { buttonState } from '@/lib/button-state'
-import { formatDate, toDateTimeLocal } from '@/lib/dates'
+import { formatDate, toDateString, toDateTimeLocal } from '@/lib/dates'
 
 // Set when the entry resolves a planned day.
 export interface PlannedDay {
@@ -22,14 +22,21 @@ interface EntryFormProps {
 
 export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
   const [description, setDescription] = useState('')
-  const [occurredAt, setOccurredAt] = useState(toDateTimeLocal(new Date()))
+  const now = new Date()
+  const excused = plannedDay?.excused ?? false
+  const doneDay = plannedDay && !excused ? plannedDay.scheduledFor : null
+  const nowLocal = toDateTimeLocal(now)
+  const [occurredAt, setOccurredAt] = useState(
+    doneDay && doneDay !== toDateString(now) ? `${doneDay}T12:00` : nowLocal,
+  )
   const [files, setFiles] = useState<File[]>([])
   const createEntry = useCreateEntry(activityId)
-  const excused = plannedDay?.excused ?? false
 
   const title = !plannedDay
-    ? 'Log entry'
-    : `${excused ? 'Excuse' : 'Complete'} ${formatDate(plannedDay.scheduledFor)}`
+    ? 'Nowy wpis'
+    : `${excused ? 'Wymówka' : 'Zrobione'}: ${formatDate(plannedDay.scheduledFor)}`
+  const minOccurredAt = doneDay ? `${doneDay}T00:00` : undefined
+  const maxOccurredAt = doneDay && doneDay < toDateString(now) ? `${doneDay}T23:59` : nowLocal
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -50,7 +57,7 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
     <Card>
       <form className="flex flex-col gap-4" onSubmit={submit}>
         <h2>{title}</h2>
-        <Field label={excused ? 'Why not?' : 'Description'} htmlFor="entry-description">
+        <Field label={excused ? 'Dlaczego nie?' : 'Opis'} htmlFor="entry-description">
           <DrawablyTextarea
             id="entry-description"
             rows={3}
@@ -59,16 +66,18 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
             required={excused}
           />
         </Field>
-        <Field label="When" htmlFor="entry-occurred-at">
+        <Field label="Kiedy" htmlFor="entry-occurred-at">
           <DrawablyInput
             id="entry-occurred-at"
             type="datetime-local"
             value={occurredAt}
+            min={minOccurredAt}
+            max={maxOccurredAt}
             onChange={(e) => setOccurredAt(e.target.value)}
             required
           />
         </Field>
-        <Field label="Photos / videos (max 10 MB each)" htmlFor="entry-files">
+        <Field label="Zdjęcia / filmy (maks. 10 MB każdy)" htmlFor="entry-files">
           <input
             id="entry-files"
             type="file"
@@ -80,10 +89,10 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
         {createEntry.error && <ErrorText>{createEntry.error.message}</ErrorText>}
         <div className="flex flex-wrap items-center gap-3">
           <DrawablyButton type="submit" variant="solid" state={buttonState(createEntry.status)}>
-            Save
+            Zapisz
           </DrawablyButton>
           <DrawablyButton type="button" tone="neutral" onClick={onDone}>
-            Cancel
+            Anuluj
           </DrawablyButton>
         </div>
       </form>

@@ -5,15 +5,11 @@ import (
 	"fmt"
 )
 
-// DB is the database handle used by DAOs that need transactions.
 type DB interface {
 	Querier() Querier
 	WithTx(ctx context.Context, fn func(q Querier) error) error
 }
 
-// WithTx executes fn inside a database transaction. If fn returns nil,
-// the transaction is committed. If fn returns an error or panics,
-// the transaction is rolled back.
 func (c *Client) WithTx(ctx context.Context, fn func(q Querier) error) error {
 	tx, err := c.sqlxDB.BeginTxx(ctx, nil)
 	if err != nil {

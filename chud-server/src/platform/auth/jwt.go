@@ -10,7 +10,6 @@ import (
 	config "github.com/sebnow/chud/platform/config"
 )
 
-// UserClaims extends standard JWT claims with custom fields.
 type UserClaims struct {
 	jwt.RegisteredClaims
 	UserID   string `json:"user_id"`

@@ -8,7 +8,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// GetOne runs a query returning a single row scanned into T, mapping driver errors to sentinel errors.
 func GetOne[T any](ctx context.Context, q Querier, query string, args ...any) (*T, error) {
 	var result T
 	err := sqlx.GetContext(ctx, q, &result, query, args...)
@@ -24,12 +23,14 @@ func GetOne[T any](ctx context.Context, q Querier, query string, args ...any) (*
 	}
 }
 
-// WrapExec runs a statement that must affect at least one row, returning ErrNotFound otherwise.
 func WrapExec(ctx context.Context, operationName string, q Querier, query string, args ...any) error {
 	_, err := Wrap(ctx, operationName, func() (struct{}, error) {
 		result, err := q.ExecContext(ctx, query, args...)
 		if hasPgCode(err, pgInvalidTextInput) {
 			return struct{}{}, ErrNotFound
+		}
+		if hasPgCode(err, pgForeignKeyViolation) {
+			return struct{}{}, ErrInUse
 		}
 		if err != nil {
 			return struct{}{}, err

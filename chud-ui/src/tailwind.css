@@ -2,9 +2,9 @@
 @import "tailwindcss/utilities.css";
 
 @theme static {
-  --color-ink: #1a1a1a;
+  --color-ink: oklch(37.1% 0 none);
   --color-muted: #6b6375;
-  --color-paper: #fbfaf6;
+  --color-paper: #fdfaf0;
   --color-danger: #c0392b;
   --color-rule: #c9c5bb;
   --color-grid: #b9b3a5;

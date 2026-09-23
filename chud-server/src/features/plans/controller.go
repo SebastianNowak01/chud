@@ -56,7 +56,7 @@ func (c *PlanAPIController) UpdatePlanHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var payload PlanPayload
+	var payload PlanUpdatePayload
 	if !httpx.DecodeJSONOrRespond(ctx, w, r, &payload) {
 		return
 	}

@@ -17,7 +17,6 @@ type CreateUserPayload struct {
 	Password string `json:"password"`
 }
 
-// UpdateUserPayload updates the given fields; an empty password leaves it unchanged.
 type UpdateUserPayload struct {
 	Username string `json:"username"`
 	Password string `json:"password"`

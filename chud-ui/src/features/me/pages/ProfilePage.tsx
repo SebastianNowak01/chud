@@ -26,7 +26,7 @@ function Profile({ me }: { me: User }) {
   const [color, setColor] = useState(me.color)
   const updateMe = useUpdateMe()
   const changed = color !== me.color
-  const memberSince = new Date(me.createdAt).toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })
+  const memberSince = new Date(me.createdAt).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -37,7 +37,7 @@ function Profile({ me }: { me: User }) {
     <>
       <Card className="w-fit max-w-full">
         <form className="flex flex-wrap items-center gap-6" onSubmit={submit}>
-          <label className="group flex cursor-pointer flex-col items-center gap-1" title="Pick your color">
+          <label className="group flex cursor-pointer flex-col items-center gap-1" title="Wybierz swój kolor">
             <ColorSwatch
               color={color}
               className="size-[104px] rounded-full transition-transform duration-150 ease-[ease] group-hover:scale-[1.04] group-hover:-rotate-6 group-focus-within:outline-2 group-focus-within:outline-offset-4 group-focus-within:outline-ink group-focus-within:outline-dashed"
@@ -45,11 +45,11 @@ function Profile({ me }: { me: User }) {
             <input
               type="color"
               className="sr-only"
-              aria-label="Your color"
+              aria-label="Twój kolor"
               value={color}
               onChange={(e) => setColor(e.target.value)}
             />
-            <Hint as="span">tap to change</Hint>
+            <Hint as="span">kliknij, aby zmienić</Hint>
           </label>
 
           <div className="flex min-w-0 flex-col items-start gap-1.5">
@@ -57,17 +57,17 @@ function Profile({ me }: { me: User }) {
               <DrawablyUnderline stroke={color}>{me.username}</DrawablyUnderline>
             </h2>
             <Hint as="span">
-              {me.isAdmin ? 'Admin · ' : ''}member since {memberSince}
+              {me.isAdmin ? 'Admin · ' : ''}w grupie od {memberSince}
             </Hint>
             <code className="text-[14px] text-muted">{color}</code>
             {updateMe.error && <ErrorText>{updateMe.error.message}</ErrorText>}
             {changed && (
               <div className="flex flex-wrap items-center gap-3">
                 <DrawablyButton type="submit" variant="solid" state={buttonState(updateMe.status)}>
-                  Save color
+                  Zapisz kolor
                 </DrawablyButton>
                 <DrawablyButton type="button" tone="neutral" onClick={() => setColor(me.color)}>
-                  Undo
+                  Cofnij
                 </DrawablyButton>
               </div>
             )}

@@ -56,25 +56,24 @@ func formatLogLevel(i any) string {
 		level = "LOG"
 	}
 
-	// Define color codes
 	var colorCode string
 	switch level {
 	case "TRACE":
-		colorCode = "\033[90m" // bright black/gray
+		colorCode = "\033[90m"
 	case "DEBUG":
-		colorCode = "\033[36m" // cyan
+		colorCode = "\033[36m"
 	case "INFO":
-		colorCode = "\033[32m" // green
+		colorCode = "\033[32m"
 	case "WARN":
-		colorCode = "\033[33m" // yellow
+		colorCode = "\033[33m"
 	case "ERROR":
-		colorCode = "\033[31m" // red
+		colorCode = "\033[31m"
 	case "FATAL":
-		colorCode = "\033[35m" // magenta
+		colorCode = "\033[35m"
 	case "PANIC":
-		colorCode = "\033[41;37m" // white on red
+		colorCode = "\033[41;37m"
 	default:
-		colorCode = "\033[0m" // default
+		colorCode = "\033[0m"
 	}
 
 	boldCode := "\033[1m"

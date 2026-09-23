@@ -14,7 +14,6 @@ type IUserDAO interface {
 	InsertUser(ctx context.Context, user *User) (*User, error)
 	UpdateUser(ctx context.Context, user *User) (*User, error)
 	DeleteUser(ctx context.Context, id string) error
-	// DemoteAdminsExcept clears the admin flag of every user other than username.
 	DemoteAdminsExcept(ctx context.Context, username string) error
 }
 

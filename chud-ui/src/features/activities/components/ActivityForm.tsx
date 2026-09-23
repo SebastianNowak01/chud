@@ -19,18 +19,18 @@ export function ActivityForm({ onDone }: { onDone: () => void }) {
   return (
     <Card>
       <form className="flex flex-col gap-4" onSubmit={submit}>
-        <h2>New activity</h2>
-        <Field label="Name" htmlFor="activity-name">
+        <h2>Nowa aktywność</h2>
+        <Field label="Nazwa" htmlFor="activity-name">
           <DrawablyInput
             id="activity-name"
-            placeholder="gym, laundry, walk…"
+            placeholder="siłownia, pranie, spacer…"
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={50}
             required
           />
         </Field>
-        <Field label="Description" htmlFor="activity-description">
+        <Field label="Opis" htmlFor="activity-description">
           <DrawablyInput
             id="activity-description"
             value={description}
@@ -40,10 +40,10 @@ export function ActivityForm({ onDone }: { onDone: () => void }) {
         {createActivity.error && <ErrorText>{createActivity.error.message}</ErrorText>}
         <div className="flex flex-wrap items-center gap-3">
           <DrawablyButton type="submit" variant="solid" state={buttonState(createActivity.status)}>
-            Create
+            Utwórz
           </DrawablyButton>
           <DrawablyButton type="button" tone="neutral" onClick={onDone}>
-            Cancel
+            Anuluj
           </DrawablyButton>
         </div>
       </form>

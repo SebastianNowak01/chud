@@ -21,7 +21,7 @@ export function ActivityGrid({ activity, entries, error }: ActivityGridProps) {
 
   return (
     <ContributionGrid
-      title="Activity"
+      title="Aktywność"
       layout={layout}
       range={range}
       onRangeChange={setRange}
