@@ -21,7 +21,7 @@ export function GroupActivityGrid({ size }: { size?: CardSize }) {
       onRangeChange={setRange}
       entries={entries.data}
       error={entries.error}
-      coloring={{ kind: 'people' }}
+      coloring={{ kind: 'single', color: 'var(--color-ink)' }}
       usersById={usersById}
       activitiesById={activitiesById}
       size={size}

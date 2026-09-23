@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type SyntheticEvent } from 'react'
 import { DrawablySelect } from 'drawably/react'
 import { roughRoundedRect, scribbleFill } from 'drawably'
 import { UserTag } from '@/components/common/UserTag'
@@ -13,6 +13,7 @@ import {
   groupByDay,
   level,
   peopleOnDay,
+  scaledLevel,
   type Day,
   type GridLayout,
   type GridRange,
@@ -56,7 +57,7 @@ const seedOf = (text: string) => {
 
 interface Stripe {
   color: string
-  done: number // 0 = only excused
+  level: number // 0 = only excused
 }
 
 const INK = 'fill-none [stroke-linecap:round] [stroke-linejoin:round]'
@@ -99,8 +100,8 @@ function SketchCell({ seedKey, stripes, outline: state = {} }: { seedKey: string
         const fill = sketch(`fill:${seed}:${i}:${stripes.length}`, () =>
           scribbleFill(2 + i * width, 2, width, CELL - 4, { seed: seed + i, roughness: 0.8 }),
         )
-        const lvl = level(stripe.done)
-        return stripe.done > 0 ? (
+        const lvl = stripe.level
+        return lvl > 0 ? (
           <path
             key={i}
             d={fill}
@@ -146,6 +147,16 @@ export function ContributionGrid({
   const today = toDateString(new Date())
   const [selected, setSelected] = useState(today)
   const days = useMemo(() => groupByDay(entries ?? []), [entries])
+  const maxDone = useMemo(
+    () => Math.max(0, ...layout.weeks.flat().map((date) => days.get(date)?.done ?? 0)),
+    [days, layout],
+  )
+  const wrapper = useRef<HTMLDivElement>(null)
+  const [hovered, setHovered] = useState<Hovered | null>(null)
+  const timer = useRef<number | undefined>(undefined)
+  const open = useRef(false)
+
+  useEffect(() => () => window.clearTimeout(timer.current), [])
 
   const width = LABEL_WIDTH + layout.weeks.length * STEP
   const height = HEADER_HEIGHT + 7 * STEP
@@ -160,13 +171,13 @@ export function ContributionGrid({
       return []
     }
     if (coloring.kind === 'single') {
-      return [{ color: coloring.color, done: day.done }]
+      return [{ color: coloring.color, level: scaledLevel(day.done, maxDone) }]
     }
     // In the small year view stripes would be unreadable, so only the day's leader is drawn.
     const people = range === 'year' ? peopleOnDay(day).slice(0, 1) : peopleOnDay(day)
     return people.map((p) => ({
       color: usersById.get(p.userId)?.color ?? '#888888',
-      done: p.excusedOnly ? 0 : day.done,
+      level: p.excusedOnly ? 0 : level(day.done),
     }))
   }
 
@@ -175,6 +186,32 @@ export function ContributionGrid({
     e?.preventDefault()
     setSelected(date)
   }
+
+  const show = (next: Hovered | null) => {
+    open.current = next !== null
+    setHovered(next)
+  }
+
+  const hover = (date: string, instant: boolean) => (e: SyntheticEvent<SVGRectElement>) => {
+    const box = wrapper.current?.getBoundingClientRect()
+    if (!box) return
+    const cell = e.currentTarget.getBoundingClientRect()
+    const x = cell.left + cell.width / 2 - box.left
+    const align = x < POPOVER_EDGE ? 'start' : x > box.width - POPOVER_EDGE ? 'end' : 'center'
+    const next: Hovered = { date, x, y: cell.top - box.top, align }
+    window.clearTimeout(timer.current)
+    if (instant || open.current) {
+      show(next)
+    } else {
+      timer.current = window.setTimeout(() => show(next), POPOVER_OPEN_DELAY)
+    }
+  }
+
+  const unhover = () => {
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => show(null), POPOVER_CLOSE_DELAY)
+  }
+  const showActivities = coloring.kind === 'single'
 
   return (
     <Card size={size} className="flex flex-col gap-4">
@@ -195,70 +232,91 @@ export function ContributionGrid({
 
       {error && <ErrorText>{error.message}</ErrorText>}
 
-      <svg
-        className="block h-auto w-full"
-        viewBox={`0 0 ${width} ${height}`}
-        style={{ maxWidth: width * PX_PER_UNIT[range] }}
-      >
-        {monthLabels.map((label, i) => (
-          <text key={i} x={LABEL_WIDTH + i * STEP} y={12} className={LABEL}>
-            {label}
-          </text>
-        ))}
-        {DAY_LABELS.map((label, weekday) => (
-          <text key={weekday} x={0} y={HEADER_HEIGHT + weekday * STEP + 15} className={LABEL}>
-            {label}
-          </text>
-        ))}
+      <div ref={wrapper} className="relative">
+        <svg
+          className="block h-auto w-full"
+          viewBox={`0 0 ${width} ${height}`}
+          style={{ maxWidth: width * PX_PER_UNIT[range] }}
+        >
+          {monthLabels.map((label, i) => (
+            <text key={i} x={LABEL_WIDTH + i * STEP} y={12} className={LABEL}>
+              {label}
+            </text>
+          ))}
+          {DAY_LABELS.map((label, weekday) => (
+            <text key={weekday} x={0} y={HEADER_HEIGHT + weekday * STEP + 15} className={LABEL}>
+              {label}
+            </text>
+          ))}
 
-        {layout.weeks.map((week, col) =>
-          week.map((date, weekday) => {
-            const day = days.get(date)
-            const isFuture = date > today
-            const summary = day ? `${day.done} done${day.excused ? `, ${day.excused} excused` : ''}` : 'nothing'
+          {layout.weeks.map((week, col) =>
+            week.map((date, weekday) => {
+              const day = days.get(date)
+              const isFuture = date > today
+              const summary = day ? `${day.done} done${day.excused ? `, ${day.excused} excused` : ''}` : 'nothing'
 
-            return (
-              <g key={date} transform={`translate(${LABEL_WIDTH + col * STEP} ${HEADER_HEIGHT + weekday * STEP})`}>
-                <SketchCell
-                  seedKey={date}
-                  stripes={stripesOf(day)}
-                  outline={{
-                    future: isFuture,
-                    today: date === today,
-                    selected: date === selected,
-                    faded: range === 'year',
-                  }}
-                />
-                {!isFuture && (
-                  <rect
-                    width={CELL}
-                    height={CELL}
-                    className="cursor-pointer fill-transparent outline-none focus-visible:stroke-ink focus-visible:[stroke-width:2]"
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`${formatDate(date)}: ${summary}`}
-                    aria-pressed={date === selected}
-                    onClick={() => select(date)()}
-                    onKeyDown={select(date)}
-                  >
-                    <title>{`${formatDate(date)}: ${summary}`}</title>
-                  </rect>
-                )}
-              </g>
-            )
-          }),
+              return (
+                <g key={date} transform={`translate(${LABEL_WIDTH + col * STEP} ${HEADER_HEIGHT + weekday * STEP})`}>
+                  <SketchCell
+                    seedKey={date}
+                    stripes={stripesOf(day)}
+                    outline={{
+                      future: isFuture,
+                      today: date === today,
+                      selected: date === selected,
+                      faded: range === 'year',
+                    }}
+                  />
+                  {!isFuture && (
+                    <rect
+                      width={CELL}
+                      height={CELL}
+                      className="cursor-pointer fill-transparent outline-none focus-visible:stroke-ink focus-visible:[stroke-width:2]"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${formatDate(date)}: ${summary}`}
+                      aria-pressed={date === selected}
+                      onClick={() => select(date)()}
+                      onKeyDown={select(date)}
+                      onPointerEnter={hover(date, false)}
+                      onPointerLeave={unhover}
+                      onFocus={hover(date, true)}
+                      onBlur={unhover}
+                    />
+                  )}
+                </g>
+              )
+            }),
+          )}
+        </svg>
+        {hovered && (
+          <Popover hovered={hovered}>
+            <p className="m-0 font-semibold">{formatDate(hovered.date)}</p>
+            <DayPeople
+              day={days.get(hovered.date)}
+              usersById={usersById}
+              activitiesById={activitiesById}
+              showActivities={showActivities}
+              compact
+            />
+          </Popover>
         )}
-      </svg>
+      </div>
 
       <Legend />
 
-      <DayDetails day={days.get(selected)} usersById={usersById} activitiesById={activitiesById} />
+      <DayPeople
+        day={days.get(selected)}
+        usersById={usersById}
+        activitiesById={activitiesById}
+        showActivities={showActivities}
+      />
     </Card>
   )
 }
 
 function Legend() {
-  const samples: Stripe[][] = [[], ...[1, 2, 3, 4].map((done) => [{ color: 'var(--color-ink)', done }])]
+  const samples: Stripe[][] = [[], ...[1, 2, 3, 4].map((lvl) => [{ color: 'var(--color-ink)', level: lvl }])]
   const legendCell = (key: string, stripes: Stripe[], i: number) => (
     <g key={key} transform={`translate(${i * STEP} 0)`}>
       <SketchCell seedKey={key} stripes={stripes} />
@@ -273,39 +331,69 @@ function Legend() {
       </svg>
       <span>more</span>
       <svg viewBox={`0 0 ${CELL} ${CELL}`} className="ml-2 size-[11px]">
-        <SketchCell seedKey="legend-excused" stripes={[{ color: 'var(--color-ink)', done: 0 }]} />
+        <SketchCell seedKey="legend-excused" stripes={[{ color: 'var(--color-ink)', level: 0 }]} />
       </svg>
       <span>excused</span>
     </div>
   )
 }
 
-interface DayDetailsProps {
+interface Hovered {
+  date: string
+  x: number
+  y: number
+  align: 'start' | 'center' | 'end'
+}
+
+const POPOVER_EDGE = 130
+const POPOVER_OPEN_DELAY = 500
+const POPOVER_CLOSE_DELAY = 150
+
+const POPOVER_ALIGN = {
+  start: '',
+  center: '-translate-x-1/2',
+  end: '',
+}
+
+function Popover({ hovered, children }: { hovered: Hovered; children: ReactNode }) {
+  const { x, y, align } = hovered
+  const position = align === 'start' ? { left: 0 } : align === 'end' ? { right: 0 } : { left: x }
+  return (
+    <div
+      role="tooltip"
+      className={`pointer-events-none absolute z-10 w-max max-w-[260px] -translate-y-full ${POPOVER_ALIGN[align]}`}
+      style={{ ...position, top: y - 6 }}
+    >
+      <Card className="flex flex-col gap-1 rounded-lg bg-paper shadow-md">{children}</Card>
+    </div>
+  )
+}
+
+interface DayPeopleProps {
   day: Day | undefined
   usersById: Map<string, User>
   activitiesById: Map<string, Activity>
+  showActivities: boolean
+  compact?: boolean
 }
 
-function DayDetails({ day, usersById, activitiesById }: DayDetailsProps) {
+function DayPeople({ day, usersById, activitiesById, showActivities, compact = false }: DayPeopleProps) {
+  if (!day?.items.length) {
+    return <Hint className="m-0">Nothing logged.</Hint>
+  }
   return (
-    <div>
-      {!day?.items.length ? (
-        <Hint className="m-0">Nothing logged.</Hint>
-      ) : (
-        <ul className="m-0 list-none p-0">
-          {day.items.map((item) => (
-            <li
-              key={`${item.userId}-${item.activityId}`}
-              className="flex min-h-11 flex-wrap items-center gap-2 border-t border-dashed border-rule"
-            >
-              <UserTag user={usersById.get(item.userId)} />
-              <span>{activitiesById.get(item.activityId)?.name ?? 'activity'}</span>
-              {item.done > 1 && <Hint as="span">×{item.done}</Hint>}
-              {item.excused > 0 && <Hint as="span">excused{item.excused > 1 ? ` ×${item.excused}` : ''}</Hint>}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <ul className="m-0 list-none p-0">
+      {day.items.map((item) => (
+        <li
+          key={`${item.userId}-${item.activityId}`}
+          className={`flex flex-wrap items-center gap-2 border-t border-dashed border-rule ${compact ? 'py-1' : 'min-h-11'}`}
+        >
+          <UserTag user={usersById.get(item.userId)} />
+          {showActivities && <span>{activitiesById.get(item.activityId)?.name ?? 'activity'}</span>}
+          {item.done > 1 && <Hint as="span">×{item.done}</Hint>}
+          {item.excused > 0 && <Hint as="span">excused{item.excused > 1 ? ` ×${item.excused}` : ''}</Hint>}
+        </li>
+      ))}
+    </ul>
   )
 }

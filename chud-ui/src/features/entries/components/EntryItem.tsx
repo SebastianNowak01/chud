@@ -1,5 +1,5 @@
-import { DrawablyBadge } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
+import { Badge } from '@/components/ui/Badge'
 import { Hint } from '@/components/ui/Hint'
 import { mediaUrl, useEntryMedia } from '@/features/entries/entries-api'
 import type { Entry } from '@/features/entries/types'
@@ -14,10 +14,11 @@ export function EntryItem({ entry, user }: { entry: Entry; user: User | undefine
       <div className="flex flex-wrap items-center gap-3">
         <UserTag user={user} />
         <Hint as="span">{formatDateTime(entry.occurredAt)}</Hint>
+        <Hint as="span">added {formatDateTime(entry.createdAt)}</Hint>
         {entry.scheduledFor && (
-          <DrawablyBadge>
+          <Badge tone={entry.excused ? 'excused' : 'done'}>
             {entry.excused ? 'excused' : 'planned'} {formatDate(apiDate(entry.scheduledFor))}
-          </DrawablyBadge>
+          </Badge>
         )}
       </div>
       {entry.description && <p className="m-0 whitespace-pre-wrap">{entry.description}</p>}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { DrawablyBadge, DrawablyButton } from 'drawably/react'
+import { DrawablyButton } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
+import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { ErrorText } from '@/components/ui/ErrorText'
 import { Hint } from '@/components/ui/Hint'
@@ -83,7 +84,7 @@ export function PlanCard({ plan, owner, entries, isMine, onResolve }: PlanCardPr
         {occurrences.map((o) => (
           <li key={o.date} className={`flex flex-wrap items-center gap-3 py-1.5 ${STATUS_STROKE[o.status]}`}>
             <span className="min-w-[110px]">{formatDate(o.date)}</span>
-            <DrawablyBadge>{STATUS_LABEL[o.status]}</DrawablyBadge>
+            <Badge>{STATUS_LABEL[o.status]}</Badge>
             {o.entry?.description && <Hint as="span">{o.entry.description}</Hint>}
             {isMine && !o.entry && (
               <span className="flex flex-wrap items-center gap-3 w-full sm:ml-auto sm:w-auto">

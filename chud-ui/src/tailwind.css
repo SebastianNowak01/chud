@@ -11,6 +11,7 @@
   --color-grid-faint: #d9d4c7;
   --color-done: #2e7d32;
   --color-excused: #9a6324;
+  --color-accent: #4363d8;
 
   --font-hand: 'Shantell Sans', 'Comic Sans MS', system-ui, sans-serif;
 
@@ -29,8 +30,11 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  * {
+  *,
+  ::before,
+  ::after {
     box-sizing: border-box;
+    border: 0 solid;
   }
 
   body {
