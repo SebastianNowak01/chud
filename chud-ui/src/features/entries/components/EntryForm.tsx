@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { DrawablyButton, DrawablyCard, DrawablyInput, DrawablyTextarea } from 'drawably/react'
+import { DrawablyButton, DrawablyInput, DrawablyTextarea } from 'drawably/react'
+import { Card } from '@/components/ui/Card'
+import { ErrorText } from '@/components/ui/ErrorText'
+import { Field } from '@/components/ui/Field'
 import { useCreateEntry } from '@/features/entries/entries-api'
 import { buttonState } from '@/lib/button-state'
 import { formatDate, toDateTimeLocal } from '@/lib/dates'
@@ -44,11 +47,10 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
   }
 
   return (
-    <DrawablyCard className="card">
-      <form className="stack" onSubmit={submit}>
+    <Card>
+      <form className="flex flex-col gap-4" onSubmit={submit}>
         <h2>{title}</h2>
-        <div className="field">
-          <label htmlFor="entry-description">{excused ? 'Why not?' : 'Description'}</label>
+        <Field label={excused ? 'Why not?' : 'Description'} htmlFor="entry-description">
           <DrawablyTextarea
             id="entry-description"
             rows={3}
@@ -56,9 +58,8 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
             onChange={(e) => setDescription(e.target.value)}
             required={excused}
           />
-        </div>
-        <div className="field">
-          <label htmlFor="entry-occurred-at">When</label>
+        </Field>
+        <Field label="When" htmlFor="entry-occurred-at">
           <DrawablyInput
             id="entry-occurred-at"
             type="datetime-local"
@@ -66,9 +67,8 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
             onChange={(e) => setOccurredAt(e.target.value)}
             required
           />
-        </div>
-        <div className="field">
-          <label htmlFor="entry-files">Photos / videos (max 10 MB each)</label>
+        </Field>
+        <Field label="Photos / videos (max 10 MB each)" htmlFor="entry-files">
           <input
             id="entry-files"
             type="file"
@@ -76,9 +76,9 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
             multiple
             onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
           />
-        </div>
-        {createEntry.error && <p className="error">{createEntry.error.message}</p>}
-        <div className="row">
+        </Field>
+        {createEntry.error && <ErrorText>{createEntry.error.message}</ErrorText>}
+        <div className="flex flex-wrap items-center gap-3">
           <DrawablyButton type="submit" variant="solid" state={buttonState(createEntry.status)}>
             Save
           </DrawablyButton>
@@ -87,6 +87,6 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
           </DrawablyButton>
         </div>
       </form>
-    </DrawablyCard>
+    </Card>
   )
 }

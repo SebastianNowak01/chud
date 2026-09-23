@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { DrawablyButton, DrawablyCard, DrawablyInput } from 'drawably/react'
+import { DrawablyButton, DrawablyInput } from 'drawably/react'
+import { Card } from '@/components/ui/Card'
+import { ErrorText } from '@/components/ui/ErrorText'
+import { Field } from '@/components/ui/Field'
 import { useCreateActivity } from '@/features/activities/activities-api'
 import { buttonState } from '@/lib/button-state'
 
@@ -14,11 +17,10 @@ export function ActivityForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <DrawablyCard className="card">
-      <form className="stack" onSubmit={submit}>
+    <Card>
+      <form className="flex flex-col gap-4" onSubmit={submit}>
         <h2>New activity</h2>
-        <div className="field">
-          <label htmlFor="activity-name">Name</label>
+        <Field label="Name" htmlFor="activity-name">
           <DrawablyInput
             id="activity-name"
             placeholder="gym, laundry, walk…"
@@ -27,17 +29,16 @@ export function ActivityForm({ onDone }: { onDone: () => void }) {
             maxLength={50}
             required
           />
-        </div>
-        <div className="field">
-          <label htmlFor="activity-description">Description</label>
+        </Field>
+        <Field label="Description" htmlFor="activity-description">
           <DrawablyInput
             id="activity-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-        </div>
-        {createActivity.error && <p className="error">{createActivity.error.message}</p>}
-        <div className="row">
+        </Field>
+        {createActivity.error && <ErrorText>{createActivity.error.message}</ErrorText>}
+        <div className="flex flex-wrap items-center gap-3">
           <DrawablyButton type="submit" variant="solid" state={buttonState(createActivity.status)}>
             Create
           </DrawablyButton>
@@ -46,6 +47,6 @@ export function ActivityForm({ onDone }: { onDone: () => void }) {
           </DrawablyButton>
         </div>
       </form>
-    </DrawablyCard>
+    </Card>
   )
 }

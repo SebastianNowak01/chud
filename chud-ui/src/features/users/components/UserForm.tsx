@@ -1,5 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { DrawablyButton, DrawablyCard, DrawablyInput } from 'drawably/react'
+import { DrawablyButton, DrawablyInput } from 'drawably/react'
+import { Card } from '@/components/ui/Card'
+import { ErrorText } from '@/components/ui/ErrorText'
+import { Field } from '@/components/ui/Field'
+import { Hint } from '@/components/ui/Hint'
 import { useCreateUser, useUpdateUser } from '@/features/users/users-api'
 import type { User } from '@/features/users/types'
 import { buttonState } from '@/lib/button-state'
@@ -30,11 +34,10 @@ export function UserForm({ user, onDone }: UserFormProps) {
   }
 
   return (
-    <DrawablyCard className="card">
-      <form className="stack" onSubmit={submit}>
+    <Card>
+      <form className="flex flex-col gap-4" onSubmit={submit}>
         <h2>{isEdit ? `Edit ${user.username}` : 'New user'}</h2>
-        <div className="field">
-          <label htmlFor="user-username">Username</label>
+        <Field label="Username" htmlFor="user-username">
           <DrawablyInput
             id="user-username"
             autoComplete="off"
@@ -44,9 +47,8 @@ export function UserForm({ user, onDone }: UserFormProps) {
             maxLength={32}
             required
           />
-        </div>
-        <div className="field">
-          <label htmlFor="user-password">Password</label>
+        </Field>
+        <Field label="Password" htmlFor="user-password">
           <DrawablyInput
             id="user-password"
             type="password"
@@ -57,10 +59,10 @@ export function UserForm({ user, onDone }: UserFormProps) {
             maxLength={72}
             required={!isEdit}
           />
-          {isEdit && <span className="hint">Leave empty to keep the current password.</span>}
-        </div>
-        {mutation.error && <p className="error">{mutation.error.message}</p>}
-        <div className="row">
+          {isEdit && <Hint as="span">Leave empty to keep the current password.</Hint>}
+        </Field>
+        {mutation.error && <ErrorText>{mutation.error.message}</ErrorText>}
+        <div className="flex flex-wrap items-center gap-3">
           <DrawablyButton type="submit" variant="solid" state={buttonState(mutation.status)}>
             {isEdit ? 'Save' : 'Create'}
           </DrawablyButton>
@@ -69,6 +71,6 @@ export function UserForm({ user, onDone }: UserFormProps) {
           </DrawablyButton>
         </div>
       </form>
-    </DrawablyCard>
+    </Card>
   )
 }

@@ -1,7 +1,10 @@
 import { useMemo, useState, type KeyboardEvent } from 'react'
-import { DrawablyCard, DrawablySelect } from 'drawably/react'
+import { DrawablySelect } from 'drawably/react'
 import { roughRoundedRect, scribbleFill } from 'drawably'
 import { UserTag } from '@/components/common/UserTag'
+import { Card, type CardSize } from '@/components/ui/Card'
+import { ErrorText } from '@/components/ui/ErrorText'
+import { Hint } from '@/components/ui/Hint'
 import type { Activity } from '@/features/activities/types'
 import type { Entry } from '@/features/entries/types'
 import type { User } from '@/features/users/types'
@@ -56,8 +59,36 @@ interface Stripe {
   done: number // 0 = only excused
 }
 
+const INK = 'fill-none [stroke-linecap:round] [stroke-linejoin:round]'
+const LABEL = 'fill-muted text-[11px]'
+
+interface OutlineState {
+  future?: boolean
+  today?: boolean
+  selected?: boolean
+  faded?: boolean
+}
+
+const outlineClass = ({ future, today, selected, faded }: OutlineState) => {
+  const stroke = selected
+    ? 'stroke-ink [stroke-width:2.4]'
+    : today
+      ? 'stroke-muted [stroke-width:1.6]'
+      : future
+        ? 'stroke-grid-faint [stroke-width:1]'
+        : 'stroke-grid [stroke-width:1]'
+  return [
+    'fill-none',
+    stroke,
+    future && '[stroke-dasharray:2_3]',
+    faded && '[stroke-opacity:0.55]',
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
 // One hand-drawn cell in local coordinates (0..CELL): pen scribbles for each stripe, then a rough outline.
-function SketchCell({ seedKey, stripes, className }: { seedKey: string; stripes: Stripe[]; className?: string }) {
+function SketchCell({ seedKey, stripes, outline: state = {} }: { seedKey: string; stripes: Stripe[]; outline?: OutlineState }) {
   const seed = seedOf(seedKey)
   const outline = sketch(`outline:${seed}`, () => roughRoundedRect(1, 1, CELL - 2, CELL - 2, 4, { seed, roughness: 0.7 }))
   const width = (CELL - 4) / Math.max(stripes.length, 1)
@@ -76,13 +107,13 @@ function SketchCell({ seedKey, stripes, className }: { seedKey: string; stripes:
             stroke={stripe.color}
             strokeWidth={LEVEL_STROKE[lvl]}
             strokeOpacity={LEVEL_OPACITY[lvl]}
-            className="cgrid__ink"
+            className={INK}
           />
         ) : (
-          <path key={i} d={fill} stroke={stripe.color} className="cgrid__ink cgrid__ink--excused" />
+          <path key={i} d={fill} stroke={stripe.color} className={`${INK} [stroke-dasharray:2_2.5] [stroke-opacity:0.8] [stroke-width:1.2]`} />
         )
       })}
-      <path d={outline} className={`cgrid__outline ${className ?? ''}`} />
+      <path d={outline} className={outlineClass(state)} />
     </>
   )
 }
@@ -97,6 +128,7 @@ interface ContributionGridProps {
   coloring: GridColoring
   usersById: Map<string, User>
   activitiesById: Map<string, Activity>
+  size?: CardSize
 }
 
 export function ContributionGrid({
@@ -109,6 +141,7 @@ export function ContributionGrid({
   coloring,
   usersById,
   activitiesById,
+  size,
 }: ContributionGridProps) {
   const today = toDateString(new Date())
   const [selected, setSelected] = useState(today)
@@ -144,9 +177,9 @@ export function ContributionGrid({
   }
 
   return (
-    <DrawablyCard className="card stack cgrid">
-      <div className="header cgrid__header">
-        <h3>{title}</h3>
+    <Card size={size} className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 [&_select]:min-h-11">
+        <h3 className="flex-1">{title}</h3>
         <DrawablySelect
           aria-label="Range"
           value={range}
@@ -160,20 +193,20 @@ export function ContributionGrid({
         </DrawablySelect>
       </div>
 
-      {error && <p className="error">{error.message}</p>}
+      {error && <ErrorText>{error.message}</ErrorText>}
 
       <svg
-        className={`cgrid__svg cgrid__svg--${range}`}
+        className="block h-auto w-full"
         viewBox={`0 0 ${width} ${height}`}
         style={{ maxWidth: width * PX_PER_UNIT[range] }}
       >
         {monthLabels.map((label, i) => (
-          <text key={i} x={LABEL_WIDTH + i * STEP} y={12} className="cgrid__label">
+          <text key={i} x={LABEL_WIDTH + i * STEP} y={12} className={LABEL}>
             {label}
           </text>
         ))}
         {DAY_LABELS.map((label, weekday) => (
-          <text key={weekday} x={0} y={HEADER_HEIGHT + weekday * STEP + 15} className="cgrid__label">
+          <text key={weekday} x={0} y={HEADER_HEIGHT + weekday * STEP + 15} className={LABEL}>
             {label}
           </text>
         ))}
@@ -182,23 +215,25 @@ export function ContributionGrid({
           week.map((date, weekday) => {
             const day = days.get(date)
             const isFuture = date > today
-            const outlineClass = [
-              isFuture && 'cgrid__outline--future',
-              date === today && 'cgrid__outline--today',
-              date === selected && 'cgrid__outline--selected',
-            ]
-              .filter(Boolean)
-              .join(' ')
             const summary = day ? `${day.done} done${day.excused ? `, ${day.excused} excused` : ''}` : 'nothing'
 
             return (
               <g key={date} transform={`translate(${LABEL_WIDTH + col * STEP} ${HEADER_HEIGHT + weekday * STEP})`}>
-                <SketchCell seedKey={date} stripes={stripesOf(day)} className={outlineClass} />
+                <SketchCell
+                  seedKey={date}
+                  stripes={stripesOf(day)}
+                  outline={{
+                    future: isFuture,
+                    today: date === today,
+                    selected: date === selected,
+                    faded: range === 'year',
+                  }}
+                />
                 {!isFuture && (
                   <rect
                     width={CELL}
                     height={CELL}
-                    className="cgrid__hit"
+                    className="cursor-pointer fill-transparent outline-none focus-visible:stroke-ink focus-visible:[stroke-width:2]"
                     role="button"
                     tabIndex={0}
                     aria-label={`${formatDate(date)}: ${summary}`}
@@ -218,12 +253,12 @@ export function ContributionGrid({
       <Legend />
 
       <DayDetails day={days.get(selected)} usersById={usersById} activitiesById={activitiesById} />
-    </DrawablyCard>
+    </Card>
   )
 }
 
 function Legend() {
-  const samples: Stripe[][] = [[], ...[1, 2, 3, 4].map((done) => [{ color: 'var(--text)', done }])]
+  const samples: Stripe[][] = [[], ...[1, 2, 3, 4].map((done) => [{ color: 'var(--color-ink)', done }])]
   const legendCell = (key: string, stripes: Stripe[], i: number) => (
     <g key={key} transform={`translate(${i * STEP} 0)`}>
       <SketchCell seedKey={key} stripes={stripes} />
@@ -231,14 +266,14 @@ function Legend() {
   )
 
   return (
-    <div className="cgrid__legend">
+    <div className="flex flex-wrap items-center gap-1 text-[11px] text-muted">
       <span>less</span>
-      <svg viewBox={`0 0 ${5 * STEP - 4} ${CELL}`} className="cgrid__legend-cells">
+      <svg viewBox={`0 0 ${5 * STEP - 4} ${CELL}`} className="h-[11px] w-auto">
         {samples.map((stripes, i) => legendCell(`legend-${i}`, stripes, i))}
       </svg>
       <span>more</span>
-      <svg viewBox={`0 0 ${CELL} ${CELL}`} className="cgrid__legend-cell">
-        <SketchCell seedKey="legend-excused" stripes={[{ color: 'var(--text)', done: 0 }]} />
+      <svg viewBox={`0 0 ${CELL} ${CELL}`} className="ml-2 size-[11px]">
+        <SketchCell seedKey="legend-excused" stripes={[{ color: 'var(--color-ink)', done: 0 }]} />
       </svg>
       <span>excused</span>
     </div>
@@ -253,17 +288,20 @@ interface DayDetailsProps {
 
 function DayDetails({ day, usersById, activitiesById }: DayDetailsProps) {
   return (
-    <div className="cgrid__details">
+    <div>
       {!day?.items.length ? (
-        <p className="hint">Nothing logged.</p>
+        <Hint className="m-0">Nothing logged.</Hint>
       ) : (
-        <ul>
+        <ul className="m-0 list-none p-0">
           {day.items.map((item) => (
-            <li key={`${item.userId}-${item.activityId}`}>
+            <li
+              key={`${item.userId}-${item.activityId}`}
+              className="flex min-h-11 flex-wrap items-center gap-2 border-t border-dashed border-rule"
+            >
               <UserTag user={usersById.get(item.userId)} />
               <span>{activitiesById.get(item.activityId)?.name ?? 'activity'}</span>
-              {item.done > 1 && <span className="hint">×{item.done}</span>}
-              {item.excused > 0 && <span className="hint">excused{item.excused > 1 ? ` ×${item.excused}` : ''}</span>}
+              {item.done > 1 && <Hint as="span">×{item.done}</Hint>}
+              {item.excused > 0 && <Hint as="span">excused{item.excused > 1 ? ` ×${item.excused}` : ''}</Hint>}
             </li>
           ))}
         </ul>

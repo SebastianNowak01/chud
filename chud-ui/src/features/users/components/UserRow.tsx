@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { DrawablyBadge, DrawablyButton } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
+import { ErrorText } from '@/components/ui/ErrorText'
+import { Hint } from '@/components/ui/Hint'
 import { useDeleteUser } from '@/features/users/users-api'
 import type { User } from '@/features/users/types'
 import { buttonState } from '@/lib/button-state'
@@ -21,12 +23,12 @@ export function UserRow({ user, onEdit }: UserRowProps) {
         <UserTag user={user} /> {user.isAdmin && <DrawablyBadge>admin</DrawablyBadge>}
       </td>
       <td>{formatDateTime(user.createdAt)}</td>
-      <td className="actions">
+      <td className="text-right">
         {user.isAdmin ? (
-          <span className="hint">Managed via env</span>
+          <Hint as="span">Managed via env</Hint>
         ) : confirmingDelete ? (
-          <div className="row">
-            {deleteUser.error && <span className="error">{deleteUser.error.message}</span>}
+          <div className="flex flex-wrap items-center gap-3 justify-end">
+            {deleteUser.error && <ErrorText as="span">{deleteUser.error.message}</ErrorText>}
             <span>Delete?</span>
             <DrawablyButton
               tone="danger"
@@ -40,7 +42,7 @@ export function UserRow({ user, onEdit }: UserRowProps) {
             </DrawablyButton>
           </div>
         ) : (
-          <div className="row">
+          <div className="flex flex-wrap items-center gap-3 justify-end">
             <DrawablyButton onClick={() => onEdit(user)}>Edit</DrawablyButton>
             <DrawablyButton tone="danger" onClick={() => setConfirmingDelete(true)}>
               Delete

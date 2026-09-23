@@ -1,8 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
-import { DrawablyButton, DrawablyCard, DrawablyInput } from 'drawably/react'
+import { DrawablyButton, DrawablyInput } from 'drawably/react'
 import { Logo } from '@/components/layout/Logo'
+import { Card } from '@/components/ui/Card'
+import { ErrorText } from '@/components/ui/ErrorText'
+import { Field } from '@/components/ui/Field'
 import { AuthApi } from '@/features/auth/auth-api'
 import { storeToken } from '@/features/auth/lib/token'
 import { buttonState } from '@/lib/button-state'
@@ -26,14 +29,13 @@ export function LoginPage() {
   }
 
   return (
-    <div className="login">
-      <DrawablyCard className="card">
-        <form className="stack" onSubmit={submit}>
-          <div className="login__logo">
+    <div className="grid min-h-svh place-items-center p-4">
+      <Card className="w-full max-w-[360px]">
+        <form className="flex flex-col gap-4" onSubmit={submit}>
+          <div className="flex justify-center">
             <Logo size="large" />
           </div>
-          <div className="field">
-            <label htmlFor="username">Username</label>
+          <Field label="Username" htmlFor="username">
             <DrawablyInput
               id="username"
               autoComplete="username"
@@ -41,9 +43,8 @@ export function LoginPage() {
               onChange={(e) => setUsername(e.target.value)}
               required
             />
-          </div>
-          <div className="field">
-            <label htmlFor="password">Password</label>
+          </Field>
+          <Field label="Password" htmlFor="password">
             <DrawablyInput
               id="password"
               type="password"
@@ -52,13 +53,13 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-          </div>
-          {login.error && <p className="error">{login.error.message}</p>}
+          </Field>
+          {login.error && <ErrorText>{login.error.message}</ErrorText>}
           <DrawablyButton type="submit" variant="solid" state={buttonState(login.status)}>
             Log in
           </DrawablyButton>
         </form>
-      </DrawablyCard>
+      </Card>
     </div>
   )
 }

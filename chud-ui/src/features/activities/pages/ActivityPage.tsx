@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { getRouteApi, Link } from '@tanstack/react-router'
 import { DrawablyButton } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
+import { ErrorText } from '@/components/ui/ErrorText'
+import { Hint } from '@/components/ui/Hint'
 import { useActivity, useMembers } from '@/features/activities/activities-api'
 import { EntryForm, type PlannedDay } from '@/features/entries/components/EntryForm'
 import { EntryItem } from '@/features/entries/components/EntryItem'
@@ -29,8 +31,8 @@ export function ActivityPage() {
 
   if (activity.error) {
     return (
-      <div className="stack">
-        <p className="error">{activity.error.message}</p>
+      <div className="flex flex-col gap-4">
+        <ErrorText>{activity.error.message}</ErrorText>
         <Link to="/activities">Back to activities</Link>
       </div>
     )
@@ -42,17 +44,17 @@ export function ActivityPage() {
   }
 
   return (
-    <div className="stack">
-      <Link to="/activities" className="hint">
+    <div className="flex flex-col gap-4">
+      <Link to="/activities" className="text-[13px] text-muted">
         ← All activities
       </Link>
-      <div className="header">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2>{activity.data?.name ?? '…'}</h2>
-          {activity.data?.description && <p className="hint">{activity.data.description}</p>}
+          {activity.data?.description && <Hint>{activity.data.description}</Hint>}
         </div>
         {form.kind === 'none' && (
-          <div className="row">
+          <div className="flex flex-wrap items-center gap-3">
             <DrawablyButton variant="solid" onClick={() => openEntryForm()}>
               Log entry
             </DrawablyButton>
@@ -62,8 +64,8 @@ export function ActivityPage() {
       </div>
 
       {members.data && members.data.length > 0 && (
-        <div className="row">
-          <span className="hint">Members:</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <Hint as="span">Members:</Hint>
           {members.data.map((member) => (
             <UserTag key={member.id} user={member} />
           ))}
@@ -81,7 +83,7 @@ export function ActivityPage() {
       {form.kind === 'plan' && <PlanForm activityId={activityId} onDone={closeForm} />}
 
       {plans.data && plans.data.length > 0 && (
-        <section className="stack">
+        <section className="flex flex-col gap-4">
           <h3>Plans</h3>
           {plans.data.map((plan) => (
             <PlanCard
@@ -96,12 +98,12 @@ export function ActivityPage() {
         </section>
       )}
 
-      <section className="stack">
+      <section className="flex flex-col gap-4">
         <h3>Latest entries</h3>
-        {entries.isPending && <p className="hint">Loading…</p>}
-        {entries.error && <p className="error">{entries.error.message}</p>}
-        {entries.data?.length === 0 && <p className="hint">Nothing logged yet.</p>}
-        <ul className="entries">
+        {entries.isPending && <Hint>Loading…</Hint>}
+        {entries.error && <ErrorText>{entries.error.message}</ErrorText>}
+        {entries.data?.length === 0 && <Hint>Nothing logged yet.</Hint>}
+        <ul className="m-0 flex list-none flex-col p-0">
           {entries.data?.map((entry) => (
             <EntryItem key={entry.id} entry={entry} user={usersById.get(entry.userId)} />
           ))}

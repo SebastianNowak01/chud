@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import { DrawablyBadge, DrawablyButton, DrawablyCard } from 'drawably/react'
+import { DrawablyBadge, DrawablyButton } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
+import { Card } from '@/components/ui/Card'
+import { ErrorText } from '@/components/ui/ErrorText'
+import { Hint } from '@/components/ui/Hint'
 import type { PlannedDay } from '@/features/entries/components/EntryForm'
 import type { Entry } from '@/features/entries/types'
 import { planOccurrences, type OccurrenceStatus } from '@/features/plans/occurrences'
@@ -20,6 +23,13 @@ const STATUS_LABEL: Record<OccurrenceStatus, string> = {
   todo: 'to do',
 }
 
+const STATUS_STROKE: Record<OccurrenceStatus, string> = {
+  done: '[--drawably-stroke:var(--color-done)]',
+  excused: '[--drawably-stroke:var(--color-excused)]',
+  missed: '[--drawably-stroke:var(--color-danger)]',
+  todo: '',
+}
+
 interface PlanCardProps {
   plan: Plan
   owner: User | undefined
@@ -37,18 +47,18 @@ export function PlanCard({ plan, owner, entries, isMine, onResolve }: PlanCardPr
   const days = WEEKDAYS.filter(({ key }) => plan[key]).map(({ label }) => label)
 
   return (
-    <DrawablyCard className="card stack">
-      <div className="header">
+    <Card className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h3>{plan.title}</h3>
-          <div className="row">
+          <div className="flex flex-wrap items-center gap-3">
             <UserTag user={owner} />
-            <span className="hint">{days.join(', ')}</span>
+            <Hint as="span">{days.join(', ')}</Hint>
           </div>
         </div>
         {isMine &&
           (confirmingDelete ? (
-            <div className="row">
+            <div className="flex flex-wrap items-center gap-3">
               <span>Delete plan?</span>
               <DrawablyButton
                 tone="danger"
@@ -68,15 +78,15 @@ export function PlanCard({ plan, owner, entries, isMine, onResolve }: PlanCardPr
           ))}
       </div>
 
-      {occurrences.length === 0 && <p className="hint">No planned days in the last two weeks or the next week.</p>}
-      <ul className="occurrences">
+      {occurrences.length === 0 && <Hint>No planned days in the last two weeks or the next week.</Hint>}
+      <ul className="m-0 flex list-none flex-col p-0">
         {occurrences.map((o) => (
-          <li key={o.date} className={`occurrence occurrence--${o.status}`}>
-            <span className="occurrence__date">{formatDate(o.date)}</span>
+          <li key={o.date} className={`flex flex-wrap items-center gap-3 py-1.5 ${STATUS_STROKE[o.status]}`}>
+            <span className="min-w-[110px]">{formatDate(o.date)}</span>
             <DrawablyBadge>{STATUS_LABEL[o.status]}</DrawablyBadge>
-            {o.entry?.description && <span className="hint">{o.entry.description}</span>}
+            {o.entry?.description && <Hint as="span">{o.entry.description}</Hint>}
             {isMine && !o.entry && (
-              <span className="row occurrence__actions">
+              <span className="flex flex-wrap items-center gap-3 w-full sm:ml-auto sm:w-auto">
                 <DrawablyButton onClick={() => onResolve({ planId: plan.id, scheduledFor: o.date, excused: false })}>
                   Done
                 </DrawablyButton>
@@ -91,7 +101,7 @@ export function PlanCard({ plan, owner, entries, isMine, onResolve }: PlanCardPr
           </li>
         ))}
       </ul>
-      {deletePlan.error && <p className="error">{deletePlan.error.message}</p>}
-    </DrawablyCard>
+      {deletePlan.error && <ErrorText>{deletePlan.error.message}</ErrorText>}
+    </Card>
   )
 }

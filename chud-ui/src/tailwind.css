@@ -1,0 +1,63 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css";
+
+@theme static {
+  --color-ink: #1a1a1a;
+  --color-muted: #6b6375;
+  --color-paper: #fbfaf6;
+  --color-danger: #c0392b;
+  --color-rule: #c9c5bb;
+  --color-grid: #b9b3a5;
+  --color-grid-faint: #d9d4c7;
+  --color-done: #2e7d32;
+  --color-excused: #9a6324;
+
+  --font-hand: 'Shantell Sans', 'Comic Sans MS', system-ui, sans-serif;
+
+  --breakpoint-sm: 37.5625rem;
+}
+
+@layer base {
+  :root {
+    --drawably-stroke: var(--color-ink);
+    --drawably-fill: var(--color-ink);
+    --drawably-paper: var(--color-paper);
+
+    font: 16px/1.5 var(--font-hand);
+    color: var(--color-ink);
+    background: var(--color-paper);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+    line-height: 1.2;
+  }
+}
+
+.drawably-card:has(:focus-visible) .drawably-focus {
+  visibility: hidden;
+}
+
+.drawably-host:not(.drawably-card):is(:focus-visible, :has(:focus-visible)) > .drawably-svg .drawably-focus {
+  visibility: visible;
+}
+
+.drawably-host,
+.drawably-host *,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-hand);
+}

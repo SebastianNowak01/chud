@@ -2,6 +2,7 @@ import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import { defineConfig } from 'vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
+import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 import { resolve } from 'node:path'
 import { cp, mkdir, rm } from 'node:fs/promises'
@@ -30,6 +31,7 @@ export default defineConfig({
       autoCodeSplitting: true,
     }),
     react(),
+    tailwindcss(),
     babel({ presets: [reactCompilerPreset()] }),
     copyServerStatic(),
   ],
