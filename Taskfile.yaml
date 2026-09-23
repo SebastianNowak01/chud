@@ -50,6 +50,11 @@ tasks:
     cmds:
       - docker compose exec db psql -U chud -d chud
 
+  db:seed:
+    desc: Fill the database with test data (rerunnable, seed users log in with 123123)
+    cmds:
+      - docker compose exec -T db psql -U chud -d chud -v ON_ERROR_STOP=1 < chud-server/seed.sql
+
   dev:
     desc: Run both ui and server in development mode
     cmds:

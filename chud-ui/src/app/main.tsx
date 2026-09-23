@@ -8,7 +8,7 @@ import { routeTree } from '../routeTree.gen'
 import '@fontsource/shantell-sans/400.css'
 import '@fontsource/shantell-sans/700.css'
 import 'drawably/style.css'
-import '../styles.css'
+import '../tailwind.css'
 
 export const queryClient = new QueryClient({
   defaultOptions: {

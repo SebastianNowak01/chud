@@ -34,6 +34,11 @@ const loadSong = () => {
   return songPromise
 }
 
+const IMAGE_SIZE = {
+  small: 'size-13 sm:size-16',
+  large: 'size-40',
+}
+
 interface LogoProps {
   size: 'small' | 'large'
   // Navbar logo links home; the login page one is just a picture.
@@ -71,22 +76,23 @@ export function Logo({ size, linked = false }: LogoProps) {
     playing.current = null
   }
 
+  const imageClass = `${IMAGE_SIZE[size]} rounded-full bg-white object-cover object-top [&:not([hidden])]:block`
   // Both faces stay in the DOM, so swapping them never waits for an image to load.
   const image = (
-    <span className={`logo logo--${size}`}>
-      <img src={calmWojak} alt="chud" draggable={false} hidden={hovered} />
-      <img src={hypedWojak} alt="chud" draggable={false} hidden={!hovered} />
+    <span className="block">
+      <img src={calmWojak} alt="chud" draggable={false} hidden={hovered} className={imageClass} />
+      <img src={hypedWojak} alt="chud" draggable={false} hidden={!hovered} className={imageClass} />
     </span>
   )
 
   const handlers = { onPointerEnter: start, onPointerLeave: stop }
 
   return linked ? (
-    <Link to="/activities" className="logo-link" aria-label="chud" {...handlers}>
+    <Link to="/activities" className="inline-flex leading-[0]" aria-label="chud" {...handlers}>
       {image}
     </Link>
   ) : (
-    <span className="logo-link" {...handlers}>
+    <span className="inline-flex leading-[0]" {...handlers}>
       {image}
     </span>
   )

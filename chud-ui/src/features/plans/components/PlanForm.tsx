@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { DrawablyButton, DrawablyCard, DrawablyCheckbox, DrawablyInput } from 'drawably/react'
+import { DrawablyButton, DrawablyCheckbox, DrawablyInput } from 'drawably/react'
+import { Card } from '@/components/ui/Card'
+import { ErrorText } from '@/components/ui/ErrorText'
+import { Field } from '@/components/ui/Field'
 import { useCreatePlan } from '@/features/plans/plans-api'
 import { WEEKDAYS, type PlanPayload, type Weekday } from '@/features/plans/types'
 import { buttonState } from '@/lib/button-state'
@@ -40,11 +43,10 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
   }
 
   return (
-    <DrawablyCard className="card">
-      <form className="stack" onSubmit={submit}>
+    <Card>
+      <form className="flex flex-col gap-4" onSubmit={submit}>
         <h2>New plan</h2>
-        <div className="field">
-          <label htmlFor="plan-title">Goal</label>
+        <Field label="Goal" htmlFor="plan-title">
           <DrawablyInput
             id="plan-title"
             placeholder="Gym three times a week"
@@ -52,21 +54,19 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
             onChange={(e) => setTitle(e.target.value)}
             required
           />
-        </div>
-        <div className="field">
-          <span className="label">Days</span>
-          <div className="row">
+        </Field>
+        <Field label="Days">
+          <div className="flex flex-wrap items-center gap-3">
             {WEEKDAYS.map(({ key, label }) => (
-              <label key={key} className="checkbox">
+              <label key={key} className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 sm:min-h-0">
                 <DrawablyCheckbox checked={days.has(key)} onChange={() => toggleDay(key)} />
                 {label}
               </label>
             ))}
           </div>
-        </div>
-        <div className="row">
-          <div className="field">
-            <label htmlFor="plan-starts-on">From</label>
+        </Field>
+        <div className="flex flex-wrap items-center gap-3">
+          <Field label="From" htmlFor="plan-starts-on" className="flex-[1_1_140px] sm:flex-initial">
             <DrawablyInput
               id="plan-starts-on"
               type="date"
@@ -74,9 +74,8 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
               onChange={(e) => setStartsOn(e.target.value)}
               required
             />
-          </div>
-          <div className="field">
-            <label htmlFor="plan-ends-on">Until (optional)</label>
+          </Field>
+          <Field label="Until (optional)" htmlFor="plan-ends-on" className="flex-[1_1_140px] sm:flex-initial">
             <DrawablyInput
               id="plan-ends-on"
               type="date"
@@ -84,10 +83,10 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
               min={startsOn}
               onChange={(e) => setEndsOn(e.target.value)}
             />
-          </div>
+          </Field>
         </div>
-        {createPlan.error && <p className="error">{createPlan.error.message}</p>}
-        <div className="row">
+        {createPlan.error && <ErrorText>{createPlan.error.message}</ErrorText>}
+        <div className="flex flex-wrap items-center gap-3">
           <DrawablyButton type="submit" variant="solid" state={buttonState(createPlan.status)}>
             Create
           </DrawablyButton>
@@ -96,6 +95,6 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
           </DrawablyButton>
         </div>
       </form>
-    </DrawablyCard>
+    </Card>
   )
 }

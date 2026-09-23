@@ -2,7 +2,7 @@ import { useId, useMemo } from 'react'
 import { roughCircle, scribbleFill } from 'drawably'
 
 // A round swatch scribbled in with a pen, matching drawably's sketches.
-export function ColorSwatch({ color, seed = 7 }: { color: string; seed?: number }) {
+export function ColorSwatch({ color, seed = 7, className }: { color: string; seed?: number; className?: string }) {
   const clipId = useId()
   const { fill, outline } = useMemo(
     () => ({
@@ -13,7 +13,7 @@ export function ColorSwatch({ color, seed = 7 }: { color: string; seed?: number 
   )
 
   return (
-    <svg viewBox="0 0 100 100" className="color-swatch" aria-hidden="true">
+    <svg viewBox="0 0 100 100" className={className} aria-hidden="true">
       <clipPath id={clipId}>
         <circle cx="50" cy="50" r="44" />
       </clipPath>
@@ -26,7 +26,7 @@ export function ColorSwatch({ color, seed = 7 }: { color: string; seed?: number 
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d={outline} className="color-swatch__outline" />
+      <path d={outline} className="fill-none stroke-ink [stroke-width:1.8]" />
     </svg>
   )
 }

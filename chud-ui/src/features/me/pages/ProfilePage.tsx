@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { DrawablyButton, DrawablyCard, DrawablyUnderline } from 'drawably/react'
+import { DrawablyButton, DrawablyUnderline } from 'drawably/react'
 import { ColorSwatch } from '@/components/common/ColorSwatch'
+import { Card } from '@/components/ui/Card'
+import { ErrorText } from '@/components/ui/ErrorText'
+import { Hint } from '@/components/ui/Hint'
 import { MyActivityGrid } from '@/features/me/components/MyActivityGrid'
 import { useMe, useUpdateMe } from '@/features/me/me-api'
 import type { User } from '@/features/users/types'
@@ -11,8 +14,8 @@ export function ProfilePage() {
   const me = useMe()
 
   return (
-    <div className="stack">
-      {me.error && <p className="error">{me.error.message}</p>}
+    <div className="flex flex-col gap-4">
+      {me.error && <ErrorText>{me.error.message}</ErrorText>}
       {me.data && <Profile key={me.data.color} me={me.data} />}
     </div>
   )
@@ -32,31 +35,34 @@ function Profile({ me }: { me: User }) {
 
   return (
     <>
-      <DrawablyCard className="card profile-card">
-        <form className="profile-card__body" onSubmit={submit}>
-          <label className="profile-card__swatch" title="Pick your color">
-            <ColorSwatch color={color} />
+      <Card className="w-fit max-w-full">
+        <form className="flex flex-wrap items-center gap-6" onSubmit={submit}>
+          <label className="group flex cursor-pointer flex-col items-center gap-1" title="Pick your color">
+            <ColorSwatch
+              color={color}
+              className="size-[104px] rounded-full transition-transform duration-150 ease-[ease] group-hover:scale-[1.04] group-hover:-rotate-6 group-focus-within:outline-2 group-focus-within:outline-offset-4 group-focus-within:outline-ink group-focus-within:outline-dashed"
+            />
             <input
               type="color"
-              className="visually-hidden"
+              className="sr-only"
               aria-label="Your color"
               value={color}
               onChange={(e) => setColor(e.target.value)}
             />
-            <span className="hint">tap to change</span>
+            <Hint as="span">tap to change</Hint>
           </label>
 
-          <div className="profile-card__info">
-            <h2 style={{ color }}>
+          <div className="flex min-w-0 flex-col items-start gap-1.5">
+            <h2 className="text-[32px] wrap-anywhere" style={{ color }}>
               <DrawablyUnderline stroke={color}>{me.username}</DrawablyUnderline>
             </h2>
-            <span className="hint">
+            <Hint as="span">
               {me.isAdmin ? 'Admin · ' : ''}member since {memberSince}
-            </span>
-            <code className="profile-card__hex">{color}</code>
-            {updateMe.error && <p className="error">{updateMe.error.message}</p>}
+            </Hint>
+            <code className="text-[14px] text-muted">{color}</code>
+            {updateMe.error && <ErrorText>{updateMe.error.message}</ErrorText>}
             {changed && (
-              <div className="row">
+              <div className="flex flex-wrap items-center gap-3">
                 <DrawablyButton type="submit" variant="solid" state={buttonState(updateMe.status)}>
                   Save color
                 </DrawablyButton>
@@ -67,7 +73,7 @@ function Profile({ me }: { me: User }) {
             )}
           </div>
         </form>
-      </DrawablyCard>
+      </Card>
 
       <MyActivityGrid me={me} color={color} />
     </>
