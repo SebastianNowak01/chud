@@ -51,7 +51,7 @@ func createServer(
 	logger := log.FromContext(ctx).With().Str("component", "api_server").Logger()
 	ctx = log.WithContext(ctx, &logger)
 
-	protectedHandler := auth.JwtAuth(protectedRouter)
+	protectedHandler := auth.JwtAuth(httpx.JSONFallback(protectedRouter))
 	publicAPIPaths := []string{
 		"/api/v1/auth/login",
 		"/api/v1/health",

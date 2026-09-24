@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { DrawablyButton } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
 import { Badge } from '@/components/ui/Badge'
-import { ErrorText } from '@/components/ui/ErrorText'
 import { Hint } from '@/components/ui/Hint'
 import { useDeleteUser } from '@/features/users/users-api'
 import type { User } from '@/features/users/types'
@@ -29,7 +28,6 @@ export function UserRow({ user, onEdit }: UserRowProps) {
           <Hint as="span">Zarządzany przez env</Hint>
         ) : confirmingDelete ? (
           <div className="flex flex-wrap items-center gap-3 justify-end">
-            {deleteUser.error && <ErrorText as="span">{deleteUser.error.message}</ErrorText>}
             <span>Usunąć?</span>
             <DrawablyButton
               tone="danger"

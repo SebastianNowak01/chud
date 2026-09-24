@@ -16,15 +16,19 @@ const useWeekCounts = (userId: string, from: string) => {
     weeks,
     loaded: occurrences.data !== undefined && entries.data !== undefined,
     error: occurrences.error ?? entries.error,
+    retry: () => {
+      void occurrences.refetch()
+      void entries.refetch()
+    },
   }
 }
 
 export const useWeekStatus = (userId: string, firstDay: string) => {
   const [focusedDate, setFocusedDate] = useState(() => toDateString(new Date()))
-  const { weeks, loaded, error } = useWeekCounts(userId, firstDay)
+  const { weeks, loaded, error, retry } = useWeekCounts(userId, firstDay)
   const week = weekStart(focusedDate)
 
   const gridStatus = useMemo<WeekStatus>(() => ({ onFocusDate: setFocusedDate }), [])
 
-  return { week, counts: weeks.get(week), loaded, error, gridStatus }
+  return { week, counts: weeks.get(week), loaded, error, retry, gridStatus }
 }

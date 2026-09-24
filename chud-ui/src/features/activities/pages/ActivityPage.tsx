@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { getRouteApi, Link } from '@tanstack/react-router'
 import { DrawablyButton } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
-import { ErrorText } from '@/components/ui/ErrorText'
+import { LoadError } from '@/components/ui/LoadError'
 import { Hint } from '@/components/ui/Hint'
 import { Modal } from '@/components/ui/Modal'
 import { useActivity, useMembers } from '@/features/activities/activities-api'
@@ -38,8 +38,8 @@ export function ActivityPage() {
   if (activity.error) {
     return (
       <div className="flex flex-col gap-4">
-        <ErrorText>{activity.error.message}</ErrorText>
-        <Link to="/activities">Wróć do pulpitu</Link>
+        <LoadError error={activity.error} onRetry={() => void activity.refetch()} />
+        <Link to="/activities">Wróć do listy aktywności</Link>
       </div>
     )
   }
@@ -49,7 +49,7 @@ export function ActivityPage() {
   return (
     <div className="flex flex-col gap-4">
       <Link to="/activities" className="text-[13px] text-muted">
-        ← All activities
+        ← Wszystkie aktywności
       </Link>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -73,7 +73,12 @@ export function ActivityPage() {
         </div>
       )}
 
-      {activity.data && <ActivityGrid activity={activity.data} entries={entries.data} error={entries.error} />}
+      {activity.data && <ActivityGrid
+          activity={activity.data}
+          entries={entries.data}
+          error={entries.error}
+          onRetry={() => void entries.refetch()}
+        />}
 
       {form.kind === 'entry' && (
         <Modal title={entryFormTitle(form.plannedDay)} onClose={closeForm}>
@@ -105,7 +110,7 @@ export function ActivityPage() {
       <section className="flex flex-col gap-4">
         <h3>Ostatnie wpisy</h3>
         {entries.isPending && <Hint>Ładowanie…</Hint>}
-        {entries.error && <ErrorText>{entries.error.message}</ErrorText>}
+        <LoadError error={entries.error} onRetry={() => void entries.refetch()} />
         {entries.data?.length === 0 && <Hint>Nic jeszcze nie zapisano.</Hint>}
         <ul className="m-0 flex list-none flex-col p-0">
           {entries.data?.map((entry) => (

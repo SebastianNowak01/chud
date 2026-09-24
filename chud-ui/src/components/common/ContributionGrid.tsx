@@ -3,7 +3,7 @@ import { DrawablySelect } from 'drawably/react'
 import { roughRoundedRect, scribbleFill } from 'drawably'
 import { UserTag } from '@/components/common/UserTag'
 import { Card, type CardSize } from '@/components/ui/Card'
-import { ErrorText } from '@/components/ui/ErrorText'
+import { LoadError } from '@/components/ui/LoadError'
 import { Hint } from '@/components/ui/Hint'
 import type { Activity } from '@/features/activities/types'
 import type { Entry } from '@/features/entries/types'
@@ -126,6 +126,7 @@ interface ContributionGridProps {
   onRangeChange: (range: GridRange) => void
   entries: Entry[] | undefined
   error?: Error | null
+  onRetry?: () => void
   coloring: GridColoring
   usersById: Map<string, User>
   activitiesById: Map<string, Activity>
@@ -144,6 +145,7 @@ export function ContributionGrid({
   onRangeChange,
   entries,
   error,
+  onRetry,
   coloring,
   usersById,
   activitiesById,
@@ -246,7 +248,7 @@ export function ContributionGrid({
         </DrawablySelect>
       </div>
 
-      {error && <ErrorText>{error.message}</ErrorText>}
+      <LoadError error={error} onRetry={onRetry} />
 
       <div ref={wrapper} className="relative">
         <svg

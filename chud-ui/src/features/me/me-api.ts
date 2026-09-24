@@ -23,6 +23,7 @@ export const useUpdateMe = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: updateMe,
+    meta: { success: 'Zapisano kolor.', inlineError: true },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: meKey })
       void queryClient.invalidateQueries({ queryKey: ['users'] })

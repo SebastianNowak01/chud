@@ -78,6 +78,7 @@ export const useCreateEntry = (activityId: string) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: EntryPayload) => createEntry(activityId, payload),
+    meta: { success: 'Zapisano wpis.', inlineError: true },
     // Entries, members and plan progress of the activity change, and so do the activity grids.
     onSuccess: () =>
       Promise.all([

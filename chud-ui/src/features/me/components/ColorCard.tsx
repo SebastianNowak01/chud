@@ -2,7 +2,7 @@ import type { FormEvent } from 'react'
 import { DrawablyButton } from 'drawably/react'
 import { ColorSwatch } from '@/components/common/ColorSwatch'
 import { Card } from '@/components/ui/Card'
-import { ErrorText } from '@/components/ui/ErrorText'
+import { FormError } from '@/components/ui/FormError'
 import { Hint } from '@/components/ui/Hint'
 import { useUpdateMe } from '@/features/me/me-api'
 import { buttonState } from '@/lib/button-state'
@@ -43,7 +43,7 @@ export function ColorCard({ color, savedColor, onColorChange }: ColorCardProps) 
         <div className="flex min-w-0 flex-col items-start gap-1.5">
           <span className="text-[14px] font-semibold tracking-widest text-muted uppercase">Twój kolor</span>
           <code className="text-[14px] text-muted">{color}</code>
-          {updateMe.error && <ErrorText>{updateMe.error.message}</ErrorText>}
+          <FormError error={updateMe.error} />
           {changed && (
             <div className="flex flex-wrap items-center gap-3">
               <DrawablyButton type="submit" variant="solid" state={buttonState(updateMe.status)}>

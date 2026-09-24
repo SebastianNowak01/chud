@@ -88,7 +88,7 @@ export function Logo({ size, linked = false }: LogoProps) {
   const handlers = { onPointerEnter: start, onPointerLeave: stop }
 
   return linked ? (
-    <Link to="/activities" className="inline-flex leading-[0]" aria-label="chud" {...handlers}>
+    <Link to="/" className="inline-flex leading-[0]" aria-label="chud" {...handlers}>
       {image}
     </Link>
   ) : (

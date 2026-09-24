@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { DrawablyButton, DrawablyInput } from 'drawably/react'
-import { ErrorText } from '@/components/ui/ErrorText'
+import { FormError } from '@/components/ui/FormError'
 import { Field } from '@/components/ui/Field'
 import { Hint } from '@/components/ui/Hint'
 import { useCreateUser, useUpdateUser } from '@/features/users/users-api'
@@ -58,7 +58,7 @@ export function UserForm({ user, onDone }: UserFormProps) {
         />
         {isEdit && <Hint as="span">Zostaw puste, aby nie zmieniać hasła.</Hint>}
       </Field>
-      {mutation.error && <ErrorText>{mutation.error.message}</ErrorText>}
+      <FormError error={mutation.error} />
       <div className="flex flex-wrap items-center gap-3">
         <DrawablyButton type="submit" variant="solid" state={buttonState(mutation.status)}>
           {isEdit ? 'Zapisz' : 'Utwórz'}
