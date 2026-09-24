@@ -35,3 +35,13 @@ export const formatMonth = (dateString: string): string =>
 
 export const formatDate = (dateString: string): string =>
   parseDate(dateString).toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric', month: 'short' })
+
+export const weekStart = (dateString: string): string => {
+  const date = parseDate(dateString)
+  return toDateString(addDays(date, -((date.getDay() + 6) % 7)))
+}
+
+export const currentWeek = (today: Date = new Date()): { from: string; to: string } => {
+  const from = weekStart(toDateString(today))
+  return { from, to: toDateString(addDays(parseDate(from), 6)) }
+}

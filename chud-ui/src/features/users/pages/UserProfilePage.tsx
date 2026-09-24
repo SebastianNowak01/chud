@@ -3,7 +3,9 @@ import { DrawablyUnderline } from 'drawably/react'
 import { Card } from '@/components/ui/Card'
 import { ErrorText } from '@/components/ui/ErrorText'
 import { Hint } from '@/components/ui/Hint'
+import { WeekMood } from '@/features/stats/components/WeekMood'
 import { useLeaderboard } from '@/features/stats/stats-api'
+import { useWeekStatus } from '@/features/stats/use-week-status'
 import { UserActivityGrid } from '@/features/users/components/UserActivityGrid'
 import { useUsers } from '@/features/users/users-api'
 import { LOCALE } from '@/lib/dates'
@@ -17,6 +19,7 @@ export function UserProfilePage() {
   const users = useUsers()
   const { range, setRange, layout } = useGridRange('grid:user')
   const leaderboard = useLeaderboard(layout.firstDay, layout.lastDay)
+  const weekStatus = useWeekStatus(userId, layout.firstDay)
 
   const user = users.data?.find((u) => u.id === userId)
   const place = leaderboard.data?.findIndex((s) => s.userId === userId) ?? -1
@@ -67,6 +70,10 @@ export function UserProfilePage() {
         )}
       </div>
 
+      <Card size="lg" className="flex items-center">
+        <WeekMood week={weekStatus.week} counts={weekStatus.counts} loaded={weekStatus.loaded} error={weekStatus.error} />
+      </Card>
+
       <Card size="lg" className="flex flex-col gap-3">
         <h3>Statystyki</h3>
         {leaderboard.error && <ErrorText>{leaderboard.error.message}</ErrorText>}
@@ -80,7 +87,7 @@ export function UserProfilePage() {
         </div>
       </Card>
 
-      <UserActivityGrid user={user} range={range} onRangeChange={setRange} layout={layout} />
+      <UserActivityGrid user={user} range={range} onRangeChange={setRange} layout={layout} weekStatus={weekStatus.gridStatus} />
     </div>
   )
 }
