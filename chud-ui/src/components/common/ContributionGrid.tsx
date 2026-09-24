@@ -130,6 +130,11 @@ interface ContributionGridProps {
   usersById: Map<string, User>
   activitiesById: Map<string, Activity>
   size?: CardSize
+  weekStatus?: WeekStatus
+}
+
+export interface WeekStatus {
+  onFocusDate: (date: string) => void
 }
 
 export function ContributionGrid({
@@ -143,6 +148,7 @@ export function ContributionGrid({
   usersById,
   activitiesById,
   size,
+  weekStatus,
 }: ContributionGridProps) {
   const today = toDateString(new Date())
   const [selected, setSelected] = useState(today)
@@ -153,10 +159,16 @@ export function ContributionGrid({
   )
   const wrapper = useRef<HTMLDivElement>(null)
   const [hovered, setHovered] = useState<Hovered | null>(null)
+  const [pointed, setPointed] = useState<string | null>(null)
+  const focused = pointed ?? selected
+  const focusedCol = weekStatus ? layout.weeks.findIndex((week) => week.includes(focused)) : -1
   const timer = useRef<number | undefined>(undefined)
   const open = useRef(false)
 
   useEffect(() => () => window.clearTimeout(timer.current), [])
+
+  const onFocusDate = weekStatus?.onFocusDate
+  useEffect(() => onFocusDate?.(focused), [onFocusDate, focused])
 
   const width = LABEL_WIDTH + layout.weeks.length * STEP
   const height = HEADER_HEIGHT + 7 * STEP
@@ -200,6 +212,7 @@ export function ContributionGrid({
     const align = x < POPOVER_EDGE ? 'start' : x > box.width - POPOVER_EDGE ? 'end' : 'center'
     const next: Hovered = { date, x, y: cell.top - box.top, align }
     window.clearTimeout(timer.current)
+    setPointed(date)
     if (instant || open.current) {
       show(next)
     } else {
@@ -209,7 +222,10 @@ export function ContributionGrid({
 
   const unhover = () => {
     window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => show(null), POPOVER_CLOSE_DELAY)
+    timer.current = window.setTimeout(() => {
+      show(null)
+      setPointed(null)
+    }, POPOVER_CLOSE_DELAY)
   }
   const showActivities = coloring.kind === 'single'
 
@@ -249,6 +265,16 @@ export function ContributionGrid({
             </text>
           ))}
 
+          {focusedCol >= 0 && (
+            <rect
+              x={LABEL_WIDTH + focusedCol * STEP - 2}
+              y={HEADER_HEIGHT - 2}
+              width={CELL + 4}
+              height={6 * STEP + CELL + 4}
+              rx={6}
+              className="fill-ink/8"
+            />
+          )}
           {layout.weeks.map((week, col) =>
             week.map((date, weekday) => {
               const day = days.get(date)

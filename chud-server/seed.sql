@@ -13,6 +13,7 @@ INSERT INTO users (id, username, password_hash, color) VALUES
 INSERT INTO activities (id, name, description, created_by)
 SELECT gen_random_uuid(), a.name, a.description, u.id
 FROM (VALUES
+    ('Gym',        'Siłownia, każdy trening się liczy',  'Ala'),
     ('Bieganie',   'Poranne i wieczorne rundki po parku', 'Ala'),
     ('Czytanie',   'Minimum 20 stron dziennie',           'Celina'),
     ('Angielski',  'Duolingo albo lekcja z lektorem',     'Bartek'),
@@ -42,7 +43,10 @@ FROM (VALUES
     ('Bartek',    'Gym',       'Trening wt/czw/sob',  FALSE, TRUE,  FALSE, TRUE,  FALSE, TRUE,  FALSE),
     ('Ala',  'Bieganie',  'Długie wybieganie',   FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE),
     ('Darek',    'Angielski', 'Lekcja z lektorem',   FALSE, TRUE,  FALSE, TRUE,  FALSE, FALSE, FALSE),
-    ('Celina',    'Bieganie',  'Truchtanie weekendowe', FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE)
+    ('Celina',    'Bieganie',  'Truchtanie weekendowe', FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE),
+    ('Celina',    'Czytanie',  'Czytanie po pracy',   TRUE,  FALSE, TRUE,  FALSE, TRUE,  FALSE, FALSE),
+    ('Bartek',    'Bez cukru', 'Tydzień bez cukru',   TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  FALSE, FALSE),
+    ('Darek',    'Medytacja', 'Medytacja co rano',   TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE)
 ) AS p(username, activity, title, monday, tuesday, wednesday, thursday, friday, saturday, sunday)
 JOIN users u ON u.username = p.username
 JOIN activities a ON a.name = p.activity;
@@ -52,17 +56,34 @@ SELECT id, activity_id, user_id, title, monday, tuesday, wednesday, thursday, fr
        CURRENT_DATE - 120
 FROM seed_plans;
 
+CREATE TEMP TABLE seed_habits ON COMMIT DROP AS
+SELECT * FROM (VALUES
+    ('Ala', 0.97, 0.05, 0.97, 0.05),
+    ('Bartek',   0.85, 0.65, 0.80, 0.80),
+    ('Celina',   0.95, 0.05, 0.60, 0.60),
+    ('Darek',   0.45, 0.20, 0.35, 0.30)
+) AS h(username, good_show, good_excuse, bad_show, bad_excuse);
+
 INSERT INTO entries (id, activity_id, user_id, plan_id, scheduled_for, excused, description, occurred_at)
-SELECT gen_random_uuid(), p.activity_id, p.user_id, p.id, d::date, r >= 0.75,
-       CASE WHEN r >= 0.75
-            THEN (ARRAY['Chory', 'Wyjazd służbowy', 'Kontuzja kolana', 'Urodziny babci'])[1 + floor(random() * 4)::int]
+SELECT gen_random_uuid(), p.activity_id, p.user_id, p.id, d::date, roll.excused,
+       CASE WHEN roll.excused
+            THEN (ARRAY['Chory', 'Wyjazd służbowy', 'Kontuzja kolana', 'Urodziny babci', 'Zaspałem', 'Pogoda nie ta'])[1 + floor(random() * 6)::int]
             ELSE pg_temp.seed_description(p.activity)
        END,
        (d::date + time '07:00' + random() * interval '12 hours') AT TIME ZONE 'Europe/Warsaw'
 FROM seed_plans p
+JOIN users u ON u.id = p.user_id
+JOIN seed_habits h ON h.username = u.username
 CROSS JOIN generate_series(CURRENT_DATE - 120, CURRENT_DATE - 1, interval '1 day') AS d
-CROSS JOIN LATERAL (SELECT random() AS r WHERE d IS NOT NULL) AS roll
-WHERE r < 0.85
+CROSS JOIN LATERAL (
+    SELECT extract(week FROM d)::int % 2 = extract(week FROM CURRENT_DATE)::int % 2 AS good_week
+) AS w
+CROSS JOIN LATERAL (
+    SELECT random() < CASE WHEN w.good_week THEN h.good_show ELSE h.bad_show END AS shows,
+           random() < CASE WHEN w.good_week THEN h.good_excuse ELSE h.bad_excuse END AS excused
+    WHERE d IS NOT NULL
+) AS roll
+WHERE roll.shows
   AND (ARRAY[p.sunday, p.monday, p.tuesday, p.wednesday, p.thursday, p.friday, p.saturday])[extract(dow FROM d)::int + 1];
 
 INSERT INTO entries (id, activity_id, user_id, description, occurred_at)
@@ -74,10 +95,10 @@ FROM (VALUES
     ('Ala',  'Czytanie',  0.08),
     ('Bartek',    'Angielski', 0.30),
     ('Bartek',    'Bez cukru', 0.12),
-    ('Celina',    'Czytanie',  0.30),
+    ('Celina',    'Czytanie',  0.15),
     ('Celina',    'Medytacja', 0.10),
     ('Celina',    'Bez cukru', 0.15),
-    ('Darek',    'Medytacja', 0.20),
+    ('Darek',    'Bieganie',  0.25),
     ('Darek',    'Gym',       0.05),
     ('Darek',    'Czytanie',  0.10)
 ) AS h(username, activity, chance)
