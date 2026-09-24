@@ -38,9 +38,6 @@ export function AppLayout() {
           <Link to="/activities" {...NAV_LINK}>
             Pulpit
           </Link>
-          <Link to="/profile" {...NAV_LINK}>
-            Profil
-          </Link>
           {session.is_admin && (
             <Link to="/users" {...NAV_LINK}>
               Użytkownicy

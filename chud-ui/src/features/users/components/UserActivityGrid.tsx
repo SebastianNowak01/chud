@@ -10,9 +10,10 @@ interface UserActivityGridProps {
   onRangeChange: (range: GridRange) => void
   layout: GridLayout
   weekStatus: WeekStatus
+  color?: string
 }
 
-export function UserActivityGrid({ user, range, onRangeChange, layout, weekStatus }: UserActivityGridProps) {
+export function UserActivityGrid({ user, range, onRangeChange, layout, weekStatus, color = user.color }: UserActivityGridProps) {
   const entries = useUserEntriesInRange(user.id, layout.firstDay, layout.lastDay)
   const activities = useActivities()
   const activitiesById = new Map((activities.data ?? []).map((a) => [a.id, a]))
@@ -25,8 +26,8 @@ export function UserActivityGrid({ user, range, onRangeChange, layout, weekStatu
       onRangeChange={onRangeChange}
       entries={entries.data}
       error={entries.error}
-      coloring={{ kind: 'single', color: user.color }}
-      usersById={new Map([[user.id, user]])}
+      coloring={{ kind: 'single', color }}
+      usersById={new Map([[user.id, { ...user, color }]])}
       activitiesById={activitiesById}
       size="lg"
       weekStatus={weekStatus}
