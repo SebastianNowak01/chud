@@ -108,8 +108,12 @@ func (s *EntryService) CreateEntry(
 	activityID, userID string,
 	payload CreateEntryPayload,
 ) (*Entry, *apperr.ServiceError) {
-	if _, err := s.activityDAO.GetActivityByID(ctx, activityID); err != nil {
+	activity, err := s.activityDAO.GetActivityByID(ctx, activityID)
+	if err != nil {
 		return nil, apperr.FromDAO(err, "activity")
+	}
+	if activity.IsArchived() {
+		return nil, activities.ErrArchived()
 	}
 
 	entry := &Entry{
@@ -165,7 +169,7 @@ func (s *EntryService) CreateEntry(
 	}
 
 	var created *Entry
-	err := s.db.WithTx(ctx, func(q db.Querier) error {
+	err = s.db.WithTx(ctx, func(q db.Querier) error {
 		dao := s.newEntryDAO(q)
 		var err error
 		if created, err = dao.InsertEntry(ctx, entry); err != nil {

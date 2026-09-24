@@ -4,4 +4,6 @@ export interface Activity {
   description: string
   createdBy: string
   createdAt: string
+  archivedAt: string | null
+  hasHistory: boolean
 }

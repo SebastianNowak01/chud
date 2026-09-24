@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS activities (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
 CREATE TABLE IF NOT EXISTS plans (
     id          UUID PRIMARY KEY,
     activity_id UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,

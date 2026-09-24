@@ -32,7 +32,9 @@ export function DashboardFilters({ users, activities, filter, onChange }: Dashbo
             label="Aktywności"
             placeholder="Wszystkie"
             emptyText="Nie ma takiej aktywności."
-            options={activities.map((a) => ({ id: a.id, label: a.name }))}
+            options={[...activities]
+              .sort((a, b) => Number(Boolean(a.archivedAt)) - Number(Boolean(b.archivedAt)))
+              .map((a) => ({ id: a.id, label: a.archivedAt ? `${a.name} (archiwum)` : a.name }))}
             selected={filter.activityIds}
             onChange={(activityIds) => onChange({ ...filter, activityIds })}
           />

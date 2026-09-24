@@ -6,7 +6,9 @@ import { LoadError } from '@/components/ui/LoadError'
 import { Hint } from '@/components/ui/Hint'
 import { Modal } from '@/components/ui/Modal'
 import { useActivity, useMembers } from '@/features/activities/activities-api'
+import { ActivityActions } from '@/features/activities/components/ActivityActions'
 import { ActivityGrid } from '@/features/activities/components/ActivityGrid'
+import { ArchivedBanner } from '@/features/activities/components/ArchivedBanner'
 import { EntryForm, type PlannedDay } from '@/features/entries/components/EntryForm'
 import { EntryItem } from '@/features/entries/components/EntryItem'
 import { useEntries } from '@/features/entries/entries-api'
@@ -45,6 +47,8 @@ export function ActivityPage() {
   }
 
   const openEntryForm = (plannedDay?: PlannedDay) => setForm({ kind: 'entry', plannedDay })
+  const archived = Boolean(activity.data?.archivedAt)
+  const canManage = activity.data?.createdBy === session.user_id || session.is_admin
 
   return (
     <div className="flex flex-col gap-4">
@@ -57,12 +61,19 @@ export function ActivityPage() {
           {activity.data?.description && <Hint>{activity.data.description}</Hint>}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <DrawablyButton variant="solid" onClick={() => openEntryForm()}>
-            Dodaj wpis
-          </DrawablyButton>
-          <DrawablyButton onClick={() => setForm({ kind: 'plan' })}>Nowy plan</DrawablyButton>
+          {!archived && (
+            <>
+              <DrawablyButton variant="solid" onClick={() => openEntryForm()}>
+                Dodaj wpis
+              </DrawablyButton>
+              <DrawablyButton onClick={() => setForm({ kind: 'plan' })}>Nowy plan</DrawablyButton>
+            </>
+          )}
+          {activity.data && canManage && !archived && <ActivityActions activity={activity.data} />}
         </div>
       </div>
+
+      {activity.data && archived && <ArchivedBanner activity={activity.data} canManage={canManage} />}
 
       {members.data && members.data.length > 0 && (
         <div className="flex flex-wrap items-center gap-3">
@@ -73,12 +84,14 @@ export function ActivityPage() {
         </div>
       )}
 
-      {activity.data && <ActivityGrid
+      {activity.data && (
+        <ActivityGrid
           activity={activity.data}
           entries={entries.data}
           error={entries.error}
           onRetry={() => void entries.refetch()}
-        />}
+        />
+      )}
 
       {form.kind === 'entry' && (
         <Modal title={entryFormTitle(form.plannedDay)} onClose={closeForm}>
@@ -100,7 +113,7 @@ export function ActivityPage() {
               plan={plan}
               owner={usersById.get(plan.userId)}
               entries={entries.data ?? []}
-              isMine={plan.userId === session.user_id}
+              isMine={plan.userId === session.user_id && !archived}
               onResolve={openEntryForm}
             />
           ))}
