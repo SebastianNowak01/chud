@@ -35,8 +35,8 @@ const loadSong = () => {
 }
 
 const IMAGE_SIZE = {
-  small: 'size-13 sm:size-16',
-  large: 'size-40',
+  small: 'size-14 sm:size-[72px]',
+  large: 'size-44',
 }
 
 interface LogoProps {
@@ -76,7 +76,7 @@ export function Logo({ size, linked = false }: LogoProps) {
     playing.current = null
   }
 
-  const imageClass = `${IMAGE_SIZE[size]} rounded-full bg-white object-cover object-top [&:not([hidden])]:block`
+  const imageClass = `${IMAGE_SIZE[size]} rounded-full bg-white object-contain object-top p-[4%] [&:not([hidden])]:block`
   // Both faces stay in the DOM, so swapping them never waits for an image to load.
   const image = (
     <span className="block">
