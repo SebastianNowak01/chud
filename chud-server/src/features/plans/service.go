@@ -52,8 +52,12 @@ func (s *PlanService) CreatePlan(
 	activityID, userID string,
 	payload PlanPayload,
 ) (*Plan, *apperr.ServiceError) {
-	if _, err := s.activityDAO.GetActivityByID(ctx, activityID); err != nil {
+	activity, err := s.activityDAO.GetActivityByID(ctx, activityID)
+	if err != nil {
 		return nil, apperr.FromDAO(err, "activity")
+	}
+	if activity.IsArchived() {
+		return nil, activities.ErrArchived()
 	}
 
 	plan := &Plan{ID: uuid.NewString(), ActivityID: activityID, UserID: userID}

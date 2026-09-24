@@ -17,10 +17,14 @@ import (
 type fakeActivityDAO struct{ activities.IActivityDAO }
 
 func (fakeActivityDAO) GetActivityByID(_ context.Context, id string) (*activities.Activity, error) {
-	if id != "gym" {
-		return nil, db.ErrNotFound
+	switch id {
+	case "gym":
+		return &activities.Activity{ID: id}, nil
+	case "old":
+		archivedAt := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+		return &activities.Activity{ID: id, ArchivedAt: &archivedAt}, nil
 	}
-	return &activities.Activity{ID: id}, nil
+	return nil, db.ErrNotFound
 }
 
 func (fakeActivityDAO) GetMembers(context.Context, string) ([]users.User, error) { return nil, nil }
@@ -110,6 +114,7 @@ func TestCreatePlanValidation(t *testing.T) {
 		wantCode int
 	}{
 		{"unknown activity", "nope", func(*PlanPayload) {}, http.StatusNotFound},
+		{"archived activity", "old", func(*PlanPayload) {}, http.StatusConflict},
 		{"empty title", "gym", func(p *PlanPayload) { p.Title = " " }, http.StatusBadRequest},
 		{"no days", "gym", func(p *PlanPayload) { p.Monday, p.Wednesday, p.Friday = false, false, false }, http.StatusBadRequest},
 		{"missing start", "gym", func(p *PlanPayload) { p.StartsOn = clock.Date{} }, http.StatusBadRequest},

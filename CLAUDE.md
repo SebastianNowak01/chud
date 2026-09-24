@@ -13,6 +13,12 @@ Strukturę pilnuje baza (`schema.sql`), czas i harmonogram — serwisy w Go.
 - Jedna strefa: `APP_TIMEZONE`, domyślnie `Europe/Warsaw` (`platform/clock`).
 - Daty jako `YYYY-MM-DD`, liczone w tej strefie.
 
+**Aktywności**
+- Usuwa, archiwizuje i przywraca autor albo admin.
+- Usunąć można tylko aktywność bez planów i wpisów; resztę się archiwizuje.
+- Archiwizacja kończy trwające plany (wczoraj albo ostatni wpis) i usuwa niezaczęte bez wpisów.
+- W archiwum żadnych nowych wpisów ani planów; historia i punkty zostają.
+
 **Plany**
 - ≥1 dzień tygodnia, niepusty tytuł, `ends_on >= starts_on`.
 - Start nie w przeszłości.

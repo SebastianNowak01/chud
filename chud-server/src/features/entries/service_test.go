@@ -18,10 +18,14 @@ import (
 type fakeActivityDAO struct{ activities.IActivityDAO }
 
 func (fakeActivityDAO) GetActivityByID(_ context.Context, id string) (*activities.Activity, error) {
-	if id != "gym" && id != "walk" {
-		return nil, db.ErrNotFound
+	switch id {
+	case "gym", "walk":
+		return &activities.Activity{ID: id}, nil
+	case "old":
+		archivedAt := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+		return &activities.Activity{ID: id, ArchivedAt: &archivedAt}, nil
 	}
-	return &activities.Activity{ID: id}, nil
+	return nil, db.ErrNotFound
 }
 
 type fakePlanDAO struct{ plans.IPlanDAO }
@@ -151,6 +155,7 @@ func TestCreateEntryValidation(t *testing.T) {
 		wantCode int
 	}{
 		{"unknown activity", "nope", "bob", CreateEntryPayload{}, http.StatusNotFound},
+		{"archived activity", "old", "bob", CreateEntryPayload{}, http.StatusConflict},
 		{"excuse without plan", "gym", "bob", CreateEntryPayload{Excused: true, Description: "x"}, http.StatusBadRequest},
 		{"day without plan", "gym", "bob", CreateEntryPayload{ScheduledFor: date("2026-09-21")}, http.StatusBadRequest},
 		{"unknown plan", "gym", "alice", CreateEntryPayload{PlanID: ptr("nope"), ScheduledFor: date("2026-09-21")}, http.StatusNotFound},
