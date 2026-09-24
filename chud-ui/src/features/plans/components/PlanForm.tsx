@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react'
 import { DrawablyButton, DrawablyCheckbox, DrawablyInput } from 'drawably/react'
-import { Card } from '@/components/ui/Card'
 import { ErrorText } from '@/components/ui/ErrorText'
 import { Field } from '@/components/ui/Field'
 import { useCreatePlan } from '@/features/plans/plans-api'
@@ -43,59 +42,56 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
   }
 
   return (
-    <Card>
-      <form className="flex flex-col gap-4" onSubmit={submit}>
-        <h2>Nowy plan</h2>
-        <Field label="Cel" htmlFor="plan-title">
+    <form className="flex flex-col gap-4" onSubmit={submit}>
+      <Field label="Cel" htmlFor="plan-title">
+        <DrawablyInput
+          id="plan-title"
+          placeholder="Siłownia trzy razy w tygodniu"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          maxLength={100}
+          required
+        />
+      </Field>
+      <Field label="Dni">
+        <div className="flex flex-wrap items-center gap-3">
+          {WEEKDAYS.map(({ key, label }) => (
+            <label key={key} className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 sm:min-h-0">
+              <DrawablyCheckbox checked={days.has(key)} onChange={() => toggleDay(key)} />
+              {label}
+            </label>
+          ))}
+        </div>
+      </Field>
+      <div className="flex flex-wrap items-center gap-3">
+        <Field label="Od" htmlFor="plan-starts-on" className="flex-[1_1_140px] sm:flex-initial">
           <DrawablyInput
-            id="plan-title"
-            placeholder="Siłownia trzy razy w tygodniu"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={100}
+            id="plan-starts-on"
+            type="date"
+            value={startsOn}
+            onChange={(e) => setStartsOn(e.target.value)}
             required
           />
         </Field>
-        <Field label="Dni">
-          <div className="flex flex-wrap items-center gap-3">
-            {WEEKDAYS.map(({ key, label }) => (
-              <label key={key} className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 sm:min-h-0">
-                <DrawablyCheckbox checked={days.has(key)} onChange={() => toggleDay(key)} />
-                {label}
-              </label>
-            ))}
-          </div>
+        <Field label="Do (opcjonalnie)" htmlFor="plan-ends-on" className="flex-[1_1_140px] sm:flex-initial">
+          <DrawablyInput
+            id="plan-ends-on"
+            type="date"
+            value={endsOn}
+            min={startsOn}
+            onChange={(e) => setEndsOn(e.target.value)}
+          />
         </Field>
-        <div className="flex flex-wrap items-center gap-3">
-          <Field label="Od" htmlFor="plan-starts-on" className="flex-[1_1_140px] sm:flex-initial">
-            <DrawablyInput
-              id="plan-starts-on"
-              type="date"
-              value={startsOn}
-              onChange={(e) => setStartsOn(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Do (opcjonalnie)" htmlFor="plan-ends-on" className="flex-[1_1_140px] sm:flex-initial">
-            <DrawablyInput
-              id="plan-ends-on"
-              type="date"
-              value={endsOn}
-              min={startsOn}
-              onChange={(e) => setEndsOn(e.target.value)}
-            />
-          </Field>
-        </div>
-        {createPlan.error && <ErrorText>{createPlan.error.message}</ErrorText>}
-        <div className="flex flex-wrap items-center gap-3">
-          <DrawablyButton type="submit" variant="solid" state={buttonState(createPlan.status)}>
-            Utwórz
-          </DrawablyButton>
-          <DrawablyButton type="button" tone="neutral" onClick={onDone}>
-            Anuluj
-          </DrawablyButton>
-        </div>
-      </form>
-    </Card>
+      </div>
+      {createPlan.error && <ErrorText>{createPlan.error.message}</ErrorText>}
+      <div className="flex flex-wrap items-center gap-3">
+        <DrawablyButton type="submit" variant="solid" state={buttonState(createPlan.status)}>
+          Utwórz
+        </DrawablyButton>
+        <DrawablyButton type="button" tone="neutral" onClick={onDone}>
+          Anuluj
+        </DrawablyButton>
+      </div>
+    </form>
   )
 }
