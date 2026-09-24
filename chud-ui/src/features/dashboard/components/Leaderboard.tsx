@@ -1,7 +1,7 @@
 import { DrawablySelect } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
 import { Card } from '@/components/ui/Card'
-import { ErrorText } from '@/components/ui/ErrorText'
+import { LoadError } from '@/components/ui/LoadError'
 import { Hint } from '@/components/ui/Hint'
 import { useLeaderboard } from '@/features/stats/stats-api'
 import { useUsersById } from '@/features/users/users-api'
@@ -35,7 +35,7 @@ export function Leaderboard({ from, to, range, onRangeChange }: LeaderboardProps
       </div>
 
       {leaderboard.isPending && <Hint>Ładowanie…</Hint>}
-      {leaderboard.error && <ErrorText>{leaderboard.error.message}</ErrorText>}
+      <LoadError error={leaderboard.error} onRetry={() => void leaderboard.refetch()} />
       {leaderboard.data && (
         <div className="overflow-x-auto">
           <table className={TABLE}>

@@ -26,6 +26,7 @@ export function UserActivityGrid({ user, range, onRangeChange, layout, weekStatu
       onRangeChange={onRangeChange}
       entries={entries.data}
       error={entries.error}
+      onRetry={() => void entries.refetch()}
       coloring={{ kind: 'single', color }}
       usersById={new Map([[user.id, { ...user, color }]])}
       activitiesById={activitiesById}

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { DrawablyButton, DrawablyCheckbox, DrawablyInput } from 'drawably/react'
-import { ErrorText } from '@/components/ui/ErrorText'
+import { FormError } from '@/components/ui/FormError'
 import { Field } from '@/components/ui/Field'
 import { useCreatePlan } from '@/features/plans/plans-api'
 import { WEEKDAYS, type PlanPayload, type Weekday } from '@/features/plans/types'
@@ -83,7 +83,7 @@ export function PlanForm({ activityId, onDone }: { activityId: string; onDone: (
           />
         </Field>
       </div>
-      {createPlan.error && <ErrorText>{createPlan.error.message}</ErrorText>}
+      <FormError error={createPlan.error} />
       <div className="flex flex-wrap items-center gap-3">
         <DrawablyButton type="submit" variant="solid" state={buttonState(createPlan.status)}>
           Utwórz

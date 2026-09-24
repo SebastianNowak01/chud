@@ -3,7 +3,7 @@ import { DrawablyButton } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
-import { ErrorText } from '@/components/ui/ErrorText'
+import { LoadError } from '@/components/ui/LoadError'
 import { Hint } from '@/components/ui/Hint'
 import type { PlannedDay } from '@/features/entries/components/EntryForm'
 import type { Entry } from '@/features/entries/types'
@@ -85,7 +85,7 @@ export function PlanCard({ plan, owner, entries, isMine, onResolve }: PlanCardPr
           ))}
       </div>
 
-      {occurrences.error && <ErrorText>{occurrences.error.message}</ErrorText>}
+      <LoadError error={occurrences.error} onRetry={() => void occurrences.refetch()} />
       {occurrences.data && planDays.length === 0 && (
         <Hint>Brak zaplanowanych dni w ostatnich dwóch tygodniach i w najbliższym tygodniu.</Hint>
       )}
@@ -116,7 +116,6 @@ export function PlanCard({ plan, owner, entries, isMine, onResolve }: PlanCardPr
           )
         })}
       </ul>
-      {mutation.error && <ErrorText>{mutation.error.message}</ErrorText>}
     </Card>
   )
 }

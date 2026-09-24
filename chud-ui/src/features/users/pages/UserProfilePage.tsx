@@ -3,6 +3,7 @@ import { getRouteApi } from '@tanstack/react-router'
 import { DrawablyUnderline } from 'drawably/react'
 import { Card } from '@/components/ui/Card'
 import { ErrorText } from '@/components/ui/ErrorText'
+import { LoadError } from '@/components/ui/LoadError'
 import { Hint } from '@/components/ui/Hint'
 import { ColorCard } from '@/features/me/components/ColorCard'
 import { WeekMood } from '@/features/stats/components/WeekMood'
@@ -29,7 +30,7 @@ export function UserProfilePage() {
   const stats = place >= 0 ? leaderboard.data?.[place] : undefined
 
   if (users.error) {
-    return <ErrorText>{users.error.message}</ErrorText>
+    return <LoadError error={users.error} onRetry={() => void users.refetch()} />
   }
   if (users.data && !user) {
     return <ErrorText>Nie znaleziono użytkownika.</ErrorText>
@@ -78,13 +79,14 @@ export function UserProfilePage() {
             counts={weekStatus.counts}
             loaded={weekStatus.loaded}
             error={weekStatus.error}
+            onRetry={weekStatus.retry}
           />
         </Card>
       </div>
 
       <Card size="lg" className="flex flex-col gap-3">
         <h3>Statystyki</h3>
-        {leaderboard.error && <ErrorText>{leaderboard.error.message}</ErrorText>}
+        <LoadError error={leaderboard.error} onRetry={() => void leaderboard.refetch()} />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
           {tiles.map((tile) => (
             <div key={tile.label} className="flex flex-col">

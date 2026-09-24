@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { DrawablyButton, DrawablyInput } from 'drawably/react'
 import { Logo } from '@/components/layout/Logo'
 import { Card } from '@/components/ui/Card'
-import { ErrorText } from '@/components/ui/ErrorText'
+import { FormError } from '@/components/ui/FormError'
 import { Field } from '@/components/ui/Field'
 import { AuthApi } from '@/features/auth/auth-api'
 import { storeToken } from '@/features/auth/lib/token'
@@ -17,6 +17,7 @@ export function LoginPage() {
 
   const login = useMutation({
     mutationFn: AuthApi.login,
+    meta: { inlineError: true },
     onSuccess: ({ token }) => {
       storeToken(token)
       void navigate({ to: '/' })
@@ -54,7 +55,7 @@ export function LoginPage() {
               required
             />
           </Field>
-          {login.error && <ErrorText>{login.error.message}</ErrorText>}
+          <FormError error={login.error} />
           <DrawablyButton type="submit" variant="solid" state={buttonState(login.status)}>
             Zaloguj się
           </DrawablyButton>

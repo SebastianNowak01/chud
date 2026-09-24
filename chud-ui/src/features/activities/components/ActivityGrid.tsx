@@ -8,9 +8,10 @@ interface ActivityGridProps {
   activity: Activity
   entries: Entry[] | undefined
   error?: Error | null
+  onRetry?: () => void
 }
 
-export function ActivityGrid({ activity, entries, error }: ActivityGridProps) {
+export function ActivityGrid({ activity, entries, error, onRetry }: ActivityGridProps) {
   const { range, setRange, layout } = useGridRange('grid:activity')
   const usersById = useUsersById()
   const activitiesById = new Map([[activity.id, activity]])
@@ -27,6 +28,7 @@ export function ActivityGrid({ activity, entries, error }: ActivityGridProps) {
       onRangeChange={setRange}
       entries={inRange}
       error={error}
+      onRetry={onRetry}
       coloring={{ kind: 'people' }}
       usersById={usersById}
       activitiesById={activitiesById}

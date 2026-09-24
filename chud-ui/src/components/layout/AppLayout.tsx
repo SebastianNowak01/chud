@@ -35,8 +35,11 @@ export function AppLayout() {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <nav className="flex flex-wrap items-center gap-3.5 sm:gap-5">
           <Logo size="small" linked />
-          <Link to="/activities" {...NAV_LINK}>
+          <Link to="/" activeOptions={{ exact: true, includeSearch: false }} {...NAV_LINK}>
             Pulpit
+          </Link>
+          <Link to="/activities" {...NAV_LINK}>
+            Aktywności
           </Link>
           {session.is_admin && (
             <Link to="/users" {...NAV_LINK}>

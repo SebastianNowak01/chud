@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { DrawablyButton } from 'drawably/react'
 import { Card } from '@/components/ui/Card'
-import { ErrorText } from '@/components/ui/ErrorText'
+import { LoadError } from '@/components/ui/LoadError'
 import { Hint } from '@/components/ui/Hint'
 import { Modal } from '@/components/ui/Modal'
 import { UserForm } from '@/features/users/components/UserForm'
@@ -33,7 +33,7 @@ export function UsersPage() {
 
       <Card>
         {users.isPending && <Hint>Ładowanie…</Hint>}
-        {users.error && <ErrorText>{users.error.message}</ErrorText>}
+        <LoadError error={users.error} onRetry={() => void users.refetch()} />
         {users.data && (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse [&_td]:border-b [&_td]:border-dashed [&_td]:border-rule [&_td]:px-2 [&_td]:py-2.5 [&_td]:text-left [&_td]:whitespace-nowrap [&_th]:border-b [&_th]:border-dashed [&_th]:border-rule [&_th]:px-2 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-[13px] [&_th]:font-semibold [&_th]:whitespace-nowrap [&_th]:text-muted">

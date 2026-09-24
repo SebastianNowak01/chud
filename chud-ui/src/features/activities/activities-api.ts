@@ -40,6 +40,7 @@ export const useCreateActivity = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: createActivity,
+    meta: { success: 'Utworzono aktywność.', inlineError: true },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: activitiesKey }),
   })
 }

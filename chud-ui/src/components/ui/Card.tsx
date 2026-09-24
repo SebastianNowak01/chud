@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react'
 import { DrawablyCard } from 'drawably/react'
 
 const PADDING = {
+  sm: 'p-1.5',
   md: 'p-3.5 sm:p-5',
   lg: 'p-3.5 sm:p-6',
 }

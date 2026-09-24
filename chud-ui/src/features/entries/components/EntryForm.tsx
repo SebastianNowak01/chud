@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { DrawablyButton, DrawablyInput, DrawablyTextarea } from 'drawably/react'
 import { ErrorText } from '@/components/ui/ErrorText'
+import { FormError } from '@/components/ui/FormError'
 import { Field } from '@/components/ui/Field'
 import { useCreateEntry } from '@/features/entries/entries-api'
 import { mediaFilesError } from '@/features/entries/media'
@@ -88,7 +89,7 @@ export function EntryForm({ activityId, plannedDay, onDone }: EntryFormProps) {
         />
       </Field>
       {filesError && <ErrorText>{filesError}</ErrorText>}
-      {createEntry.error && <ErrorText>{createEntry.error.message}</ErrorText>}
+      <FormError error={createEntry.error} />
       <div className="flex flex-wrap items-center gap-3">
         <DrawablyButton
           type="submit"

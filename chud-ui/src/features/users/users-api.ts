@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, type MutationMeta, useQuery, useQueryClient } from '@tanstack/react-query'
 import { authFetch } from '@/lib/api-client'
 import type { User, UserPayload } from '@/features/users/types'
 
@@ -31,17 +31,22 @@ const deleteUser = async (id: string): Promise<void> => {
 
 export const useUsers = () => useQuery({ queryKey: usersKey, queryFn: getUsers })
 
-const useUsersMutation = <TVariables, TData>(mutationFn: (variables: TVariables) => Promise<TData>) => {
+const useUsersMutation = <TVariables, TData>(
+  mutationFn: (variables: TVariables) => Promise<TData>,
+  meta: MutationMeta,
+) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn,
+    meta,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: usersKey }),
   })
 }
 
-export const useCreateUser = () => useUsersMutation(createUser)
-export const useUpdateUser = () => useUsersMutation(updateUser)
-export const useDeleteUser = () => useUsersMutation(deleteUser)
+export const useCreateUser = () =>
+  useUsersMutation(createUser, { success: 'Dodano użytkownika.', inlineError: true })
+export const useUpdateUser = () => useUsersMutation(updateUser, { success: 'Zapisano zmiany.', inlineError: true })
+export const useDeleteUser = () => useUsersMutation(deleteUser, { success: 'Usunięto użytkownika.' })
 
 // Lookup of every user by id, for showing names and colors next to activity data.
 export const useUsersById = (): Map<string, User> => {
