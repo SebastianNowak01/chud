@@ -41,6 +41,10 @@
     margin: 0;
   }
 
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
+
   h1,
   h2,
   h3 {

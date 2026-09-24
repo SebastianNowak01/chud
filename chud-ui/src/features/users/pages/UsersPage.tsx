@@ -3,6 +3,7 @@ import { DrawablyButton } from 'drawably/react'
 import { Card } from '@/components/ui/Card'
 import { ErrorText } from '@/components/ui/ErrorText'
 import { Hint } from '@/components/ui/Hint'
+import { Modal } from '@/components/ui/Modal'
 import { UserForm } from '@/features/users/components/UserForm'
 import { UserRow } from '@/features/users/components/UserRow'
 import { useUsers } from '@/features/users/users-api'
@@ -19,19 +20,15 @@ export function UsersPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2>Użytkownicy</h2>
-        {form.mode === 'closed' && (
-          <DrawablyButton variant="solid" onClick={() => setForm({ mode: 'create' })}>
-            Dodaj użytkownika
-          </DrawablyButton>
-        )}
+        <DrawablyButton variant="solid" onClick={() => setForm({ mode: 'create' })}>
+          Dodaj użytkownika
+        </DrawablyButton>
       </div>
 
       {form.mode !== 'closed' && (
-        <UserForm
-          key={form.mode === 'edit' ? form.user.id : 'new'}
-          user={form.mode === 'edit' ? form.user : undefined}
-          onDone={closeForm}
-        />
+        <Modal title={form.mode === 'edit' ? `Edytuj: ${form.user.username}` : 'Nowy użytkownik'} onClose={closeForm}>
+          <UserForm user={form.mode === 'edit' ? form.user : undefined} onDone={closeForm} />
+        </Modal>
       )}
 
       <Card>

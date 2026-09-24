@@ -391,7 +391,7 @@ function Popover({ hovered, children }: { hovered: Hovered; children: ReactNode 
       className={`pointer-events-none absolute z-10 w-max max-w-[260px] -translate-y-full ${POPOVER_ALIGN[align]}`}
       style={{ ...position, top: y - 6 }}
     >
-      <Card className="flex flex-col gap-1 rounded-lg bg-paper shadow-md">{children}</Card>
+      <Card filled className="flex flex-col gap-1">{children}</Card>
     </div>
   )
 }

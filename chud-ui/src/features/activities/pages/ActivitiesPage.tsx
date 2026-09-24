@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { DrawablyButton } from 'drawably/react'
 import { Card } from '@/components/ui/Card'
 import { ErrorText } from '@/components/ui/ErrorText'
+import { Modal } from '@/components/ui/Modal'
 import { ActivityForm } from '@/features/activities/components/ActivityForm'
 import { GroupActivityGrid } from '@/features/activities/components/GroupActivityGrid'
 import { useActivities } from '@/features/activities/activities-api'
@@ -18,14 +19,16 @@ export function ActivitiesPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-[26px] sm:text-[32px]">Pulpit</h2>
-        {!creating && (
-          <DrawablyButton variant="solid" onClick={() => setCreating(true)}>
-            Nowa aktywność
-          </DrawablyButton>
-        )}
+        <DrawablyButton variant="solid" onClick={() => setCreating(true)}>
+          Nowa aktywność
+        </DrawablyButton>
       </div>
 
-      {creating && <ActivityForm onDone={() => setCreating(false)} />}
+      {creating && (
+        <Modal title="Nowa aktywność" onClose={() => setCreating(false)}>
+          <ActivityForm onDone={() => setCreating(false)} />
+        </Modal>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <GroupActivityGrid range={range} onRangeChange={setRange} layout={layout} size="lg" />

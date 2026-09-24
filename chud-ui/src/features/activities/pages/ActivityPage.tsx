@@ -4,6 +4,7 @@ import { DrawablyButton } from 'drawably/react'
 import { UserTag } from '@/components/common/UserTag'
 import { ErrorText } from '@/components/ui/ErrorText'
 import { Hint } from '@/components/ui/Hint'
+import { Modal } from '@/components/ui/Modal'
 import { useActivity, useMembers } from '@/features/activities/activities-api'
 import { ActivityGrid } from '@/features/activities/components/ActivityGrid'
 import { EntryForm, type PlannedDay } from '@/features/entries/components/EntryForm'
@@ -13,8 +14,12 @@ import { PlanCard } from '@/features/plans/components/PlanCard'
 import { PlanForm } from '@/features/plans/components/PlanForm'
 import { usePlans } from '@/features/plans/plans-api'
 import { useUsersById } from '@/features/users/users-api'
+import { formatDate } from '@/lib/dates'
 
 const activityRoute = getRouteApi('/_authenticated/activities/$activityId')
+
+const entryFormTitle = (plannedDay?: PlannedDay) =>
+  !plannedDay ? 'Nowy wpis' : `${plannedDay.excused ? 'Wymówka' : 'Zrobione'}: ${formatDate(plannedDay.scheduledFor)}`
 
 type FormState = { kind: 'none' } | { kind: 'entry'; plannedDay?: PlannedDay } | { kind: 'plan' }
 
@@ -39,10 +44,7 @@ export function ActivityPage() {
     )
   }
 
-  const openEntryForm = (plannedDay?: PlannedDay) => {
-    setForm({ kind: 'entry', plannedDay })
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  const openEntryForm = (plannedDay?: PlannedDay) => setForm({ kind: 'entry', plannedDay })
 
   return (
     <div className="flex flex-col gap-4">
@@ -54,14 +56,12 @@ export function ActivityPage() {
           <h2>{activity.data?.name ?? '…'}</h2>
           {activity.data?.description && <Hint>{activity.data.description}</Hint>}
         </div>
-        {form.kind === 'none' && (
-          <div className="flex flex-wrap items-center gap-3">
-            <DrawablyButton variant="solid" onClick={() => openEntryForm()}>
-              Dodaj wpis
-            </DrawablyButton>
-            <DrawablyButton onClick={() => setForm({ kind: 'plan' })}>Nowy plan</DrawablyButton>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <DrawablyButton variant="solid" onClick={() => openEntryForm()}>
+            Dodaj wpis
+          </DrawablyButton>
+          <DrawablyButton onClick={() => setForm({ kind: 'plan' })}>Nowy plan</DrawablyButton>
+        </div>
       </div>
 
       {members.data && members.data.length > 0 && (
@@ -76,14 +76,15 @@ export function ActivityPage() {
       {activity.data && <ActivityGrid activity={activity.data} entries={entries.data} error={entries.error} />}
 
       {form.kind === 'entry' && (
-        <EntryForm
-          key={form.plannedDay ? `${form.plannedDay.planId}-${form.plannedDay.scheduledFor}` : 'new'}
-          activityId={activityId}
-          plannedDay={form.plannedDay}
-          onDone={closeForm}
-        />
+        <Modal title={entryFormTitle(form.plannedDay)} onClose={closeForm}>
+          <EntryForm activityId={activityId} plannedDay={form.plannedDay} onDone={closeForm} />
+        </Modal>
       )}
-      {form.kind === 'plan' && <PlanForm activityId={activityId} onDone={closeForm} />}
+      {form.kind === 'plan' && (
+        <Modal title="Nowy plan" onClose={closeForm}>
+          <PlanForm activityId={activityId} onDone={closeForm} />
+        </Modal>
+      )}
 
       {plans.data && plans.data.length > 0 && (
         <section className="flex flex-col gap-4">
