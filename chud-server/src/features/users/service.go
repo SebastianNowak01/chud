@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sebnow/chud/platform/apperr"
 	"github.com/sebnow/chud/platform/auth"
+	"github.com/sebnow/chud/platform/config"
 	"github.com/sebnow/chud/platform/db"
 	"github.com/sebnow/chud/platform/log"
 	"github.com/sebnow/chud/platform/ratelimit"
@@ -19,7 +21,7 @@ import (
 const (
 	minUsernameLength = 3
 	maxUsernameLength = 32
-	minPasswordLength = 6
+	minPasswordLength = 8
 	maxPasswordLength = 72
 	maxLoginFailures  = 10
 	loginFailWindow   = 15 * time.Minute
@@ -221,6 +223,10 @@ func (s *UserService) IsAdmin(ctx context.Context, id string) (bool, error) {
 
 func (s *UserService) EnsureAdminUserExists(ctx context.Context, username, password string) error {
 	logger := log.FromContext(ctx)
+
+	if svcErr := validatePassword(password); svcErr != nil {
+		return fmt.Errorf("invalid %s: %w", config.AdminPassword, svcErr.Err)
+	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

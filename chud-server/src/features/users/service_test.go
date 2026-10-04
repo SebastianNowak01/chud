@@ -85,7 +85,7 @@ func TestUserCRUD(t *testing.T) {
 	ctx := context.Background()
 	svc := newTestService(t)
 
-	created, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "  alice ", Password: "secret1"})
+	created, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "  alice ", Password: "secret11"})
 	require.Nil(t, svcErr)
 	assert.Equal(t, "alice", created.Username)
 	assert.False(t, created.IsAdmin)
@@ -98,12 +98,12 @@ func TestUserCRUD(t *testing.T) {
 	require.Nil(t, svcErr)
 	assert.Equal(t, "alicja", updated.Username)
 
-	_, svcErr = svc.Login(ctx, LoginPayload{Username: "alicja", Password: "secret1"})
+	_, svcErr = svc.Login(ctx, LoginPayload{Username: "alicja", Password: "secret11"})
 	require.Nil(t, svcErr)
 
-	_, svcErr = svc.UpdateUser(ctx, created.ID, UpdateUserPayload{Username: "alicja", Password: "secret2"})
+	_, svcErr = svc.UpdateUser(ctx, created.ID, UpdateUserPayload{Username: "alicja", Password: "secret22"})
 	require.Nil(t, svcErr)
-	_, svcErr = svc.Login(ctx, LoginPayload{Username: "alicja", Password: "secret2"})
+	_, svcErr = svc.Login(ctx, LoginPayload{Username: "alicja", Password: "secret22"})
 	require.Nil(t, svcErr)
 
 	require.Nil(t, svc.DeleteUser(ctx, created.ID))
@@ -121,9 +121,9 @@ func TestCreateUserValidation(t *testing.T) {
 		payload  CreateUserPayload
 		wantCode int
 	}{
-		{"short username", CreateUserPayload{Username: "ab", Password: "secret1"}, http.StatusBadRequest},
+		{"short username", CreateUserPayload{Username: "ab", Password: "secret11"}, http.StatusBadRequest},
 		{"short password", CreateUserPayload{Username: "alice", Password: "123"}, http.StatusBadRequest},
-		{"admin username taken", CreateUserPayload{Username: "admin", Password: "secret1"}, http.StatusConflict},
+		{"admin username taken", CreateUserPayload{Username: "admin", Password: "secret11"}, http.StatusConflict},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -138,9 +138,9 @@ func TestUpdateToTakenUsernameConflicts(t *testing.T) {
 	ctx := context.Background()
 	svc := newTestService(t)
 
-	_, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "alice", Password: "secret1"})
+	_, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "alice", Password: "secret11"})
 	require.Nil(t, svcErr)
-	bob, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "bob", Password: "secret1"})
+	bob, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "bob", Password: "secret11"})
 	require.Nil(t, svcErr)
 
 	_, svcErr = svc.UpdateUser(ctx, bob.ID, UpdateUserPayload{Username: "alice"})
@@ -165,7 +165,7 @@ func TestAdminIsLocked(t *testing.T) {
 func TestLogin(t *testing.T) {
 	ctx := context.Background()
 	svc := newTestService(t)
-	_, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "alice", Password: "secret1"})
+	_, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "alice", Password: "secret11"})
 	require.Nil(t, svcErr)
 
 	adminLogin, svcErr := svc.Login(ctx, LoginPayload{Username: "admin", Password: "admin-pass"})
@@ -174,7 +174,7 @@ func TestLogin(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, claims.IsAdmin)
 
-	userLogin, svcErr := svc.Login(ctx, LoginPayload{Username: "alice", Password: "secret1"})
+	userLogin, svcErr := svc.Login(ctx, LoginPayload{Username: "alice", Password: "secret11"})
 	require.Nil(t, svcErr)
 	claims, err = auth.ValidateJwt(userLogin.Token)
 	require.NoError(t, err)
@@ -185,7 +185,7 @@ func TestLogin(t *testing.T) {
 	require.NotNil(t, svcErr)
 	assert.Equal(t, http.StatusUnauthorized, svcErr.Code)
 
-	_, svcErr = svc.Login(ctx, LoginPayload{Username: "nobody", Password: "secret1"})
+	_, svcErr = svc.Login(ctx, LoginPayload{Username: "nobody", Password: "secret11"})
 	require.NotNil(t, svcErr)
 	assert.Equal(t, http.StatusUnauthorized, svcErr.Code)
 }
@@ -224,7 +224,7 @@ func TestIsAdmin(t *testing.T) {
 	ctx := context.Background()
 	svc := newTestService(t)
 	admin := findAdmin(t, svc)
-	alice, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "alice", Password: "secret1"})
+	alice, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "alice", Password: "secret11"})
 	require.Nil(t, svcErr)
 
 	isAdmin, err := svc.IsAdmin(ctx, admin.ID)
@@ -239,4 +239,9 @@ func TestIsAdmin(t *testing.T) {
 	isAdmin, err = svc.IsAdmin(ctx, admin.ID)
 	require.NoError(t, err)
 	assert.False(t, isAdmin, "demoted admin loses access despite old token")
+}
+
+func TestEnsureAdminUserExistsRejectsWeakPassword(t *testing.T) {
+	svc := NewUserService(UserServiceDeps{UserDAO: newFakeUserDAO()})
+	assert.Error(t, svc.EnsureAdminUserExists(context.Background(), "admin", "123123"))
 }

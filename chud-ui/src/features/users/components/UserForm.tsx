@@ -52,7 +52,7 @@ export function UserForm({ user, onDone }: UserFormProps) {
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          minLength={6}
+          minLength={8}
           maxLength={72}
           required={!isEdit}
         />
