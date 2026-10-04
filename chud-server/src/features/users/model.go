@@ -29,6 +29,7 @@ type UpdateMePayload struct {
 type LoginPayload struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	ClientIP string `json:"-"`
 }
 
 type LoginResponse struct {

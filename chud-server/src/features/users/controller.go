@@ -23,6 +23,7 @@ func (c *UserAPIController) LoginHandler(w http.ResponseWriter, r *http.Request)
 	if !httpx.DecodeJSONOrRespond(ctx, w, r, &payload) {
 		return
 	}
+	payload.ClientIP = httpx.ClientIP(r)
 
 	loginResponse, err := c.service.Login(ctx, payload)
 	if err != nil {

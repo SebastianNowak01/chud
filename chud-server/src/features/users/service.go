@@ -22,6 +22,7 @@ const (
 	minPasswordLength = 6
 	maxPasswordLength = 72
 	maxLoginFailures  = 10
+	maxIPFailures     = 30
 	loginFailWindow   = 15 * time.Minute
 )
 
@@ -45,6 +46,7 @@ type UserService struct {
 	dao          IUserDAO
 	dummyHash    []byte
 	loginLimiter *ratelimit.Limiter
+	ipLimiter    *ratelimit.Limiter
 }
 
 func NewUserService(deps UserServiceDeps) *UserService {
@@ -53,6 +55,7 @@ func NewUserService(deps UserServiceDeps) *UserService {
 		dao:          deps.UserDAO,
 		dummyHash:    dummyHash,
 		loginLimiter: ratelimit.New(maxLoginFailures, loginFailWindow),
+		ipLimiter:    ratelimit.New(maxIPFailures, loginFailWindow),
 	}
 }
 
@@ -173,8 +176,8 @@ func (s *UserService) DeleteUser(ctx context.Context, id string) *apperr.Service
 func (s *UserService) Login(ctx context.Context, payload LoginPayload) (*LoginResponse, *apperr.ServiceError) {
 	username := strings.TrimSpace(payload.Username)
 	limitKey := strings.ToLower(username)
-	if !s.loginLimiter.Allowed(limitKey) {
-		log.FromContext(ctx).Warn().Str("username", username).Msg("Login blocked by rate limit")
+	if !s.loginLimiter.Allowed(limitKey) || !s.ipLimiter.Allowed(payload.ClientIP) {
+		log.FromContext(ctx).Warn().Str("username", username).Str("ip", payload.ClientIP).Msg("Login blocked by rate limit")
 		return nil, &apperr.ServiceError{
 			Code: http.StatusTooManyRequests,
 			Err:  errors.New("za dużo nieudanych prób logowania, spróbuj za kilka minut"),
@@ -187,10 +190,10 @@ func (s *UserService) Login(ctx context.Context, payload LoginPayload) (*LoginRe
 			return nil, daoError(err)
 		}
 		_ = bcrypt.CompareHashAndPassword(s.dummyHash, []byte(payload.Password))
-		return nil, s.loginFailed(ctx, username, limitKey)
+		return nil, s.loginFailed(ctx, username, limitKey, payload.ClientIP)
 	}
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(payload.Password)) != nil {
-		return nil, s.loginFailed(ctx, username, limitKey)
+		return nil, s.loginFailed(ctx, username, limitKey, payload.ClientIP)
 	}
 	s.loginLimiter.Reset(limitKey)
 
@@ -202,9 +205,10 @@ func (s *UserService) Login(ctx context.Context, payload LoginPayload) (*LoginRe
 	return &LoginResponse{Token: token, User: *user}, nil
 }
 
-func (s *UserService) loginFailed(ctx context.Context, username, limitKey string) *apperr.ServiceError {
+func (s *UserService) loginFailed(ctx context.Context, username, limitKey, clientIP string) *apperr.ServiceError {
 	s.loginLimiter.Fail(limitKey)
-	log.FromContext(ctx).Warn().Str("username", username).Msg("Failed login attempt")
+	s.ipLimiter.Fail(clientIP)
+	log.FromContext(ctx).Warn().Str("username", username).Str("ip", clientIP).Msg("Failed login attempt")
 	return apperr.NewUnauthorizedError("nieprawidłowa nazwa użytkownika lub hasło")
 }
 

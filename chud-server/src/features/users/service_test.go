@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -239,4 +240,24 @@ func TestIsAdmin(t *testing.T) {
 	isAdmin, err = svc.IsAdmin(ctx, admin.ID)
 	require.NoError(t, err)
 	assert.False(t, isAdmin, "demoted admin loses access despite old token")
+}
+
+func TestLoginRateLimitPerIP(t *testing.T) {
+	ctx := context.Background()
+	svc := newTestService(t)
+	_, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "alice", Password: "secret1"})
+	require.Nil(t, svcErr)
+
+	for i := range maxIPFailures {
+		_, svcErr := svc.Login(ctx, LoginPayload{Username: fmt.Sprintf("user%d", i), Password: "wrong", ClientIP: "6.6.6.6"})
+		require.NotNil(t, svcErr)
+		assert.Equal(t, http.StatusUnauthorized, svcErr.Code)
+	}
+
+	_, svcErr = svc.Login(ctx, LoginPayload{Username: "alice", Password: "secret1", ClientIP: "6.6.6.6"})
+	require.NotNil(t, svcErr)
+	assert.Equal(t, http.StatusTooManyRequests, svcErr.Code, "spraying from one IP gets blocked")
+
+	_, svcErr = svc.Login(ctx, LoginPayload{Username: "alice", Password: "secret1", ClientIP: "1.2.3.4"})
+	assert.Nil(t, svcErr, "other IPs unaffected")
 }

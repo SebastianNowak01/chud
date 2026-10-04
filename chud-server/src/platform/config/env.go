@@ -17,6 +17,7 @@ const (
 	AdminPassword  = "ADMIN_PASSWORD"
 	DatabaseURL    = "DATABASE_URL"
 	AppTimezone    = "APP_TIMEZONE"
+	RealIPHeader   = "REAL_IP_HEADER"
 )
 
 func Validate() error {
