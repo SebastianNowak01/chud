@@ -13,6 +13,7 @@ import { UserActivityGrid } from '@/features/users/components/UserActivityGrid'
 import { useUsers } from '@/features/users/users-api'
 import { LOCALE } from '@/lib/dates'
 import { useGridRange } from '@/lib/use-grid-range'
+import { usePageTitle } from '@/lib/use-page-title'
 
 const userRoute = getRouteApi('/_authenticated/users/$userId')
 
@@ -26,6 +27,7 @@ export function UserProfilePage() {
   const [pickedColor, setPickedColor] = useState<string | null>(null)
 
   const user = users.data?.find((u) => u.id === userId)
+  usePageTitle(user?.username)
   const place = leaderboard.data?.findIndex((s) => s.userId === userId) ?? -1
   const stats = place >= 0 ? leaderboard.data?.[place] : undefined
 

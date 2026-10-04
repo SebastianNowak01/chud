@@ -6,10 +6,12 @@ import { Leaderboard } from '@/features/dashboard/components/Leaderboard'
 import { parseIds, serializeIds, type DashboardFilter } from '@/features/dashboard/filters'
 import { useUsers } from '@/features/users/users-api'
 import { useGridRange } from '@/lib/use-grid-range'
+import { usePageTitle } from '@/lib/use-page-title'
 
 const dashboardRoute = getRouteApi('/_authenticated/')
 
 export function DashboardPage() {
+  usePageTitle('Pulpit')
   const search = dashboardRoute.useSearch()
   const navigate = dashboardRoute.useNavigate()
   const users = useUsers()

@@ -17,6 +17,7 @@ import { PlanForm } from '@/features/plans/components/PlanForm'
 import { usePlans } from '@/features/plans/plans-api'
 import { useUsersById } from '@/features/users/users-api'
 import { formatDate } from '@/lib/dates'
+import { usePageTitle } from '@/lib/use-page-title'
 
 const activityRoute = getRouteApi('/_authenticated/activities/$activityId')
 
@@ -36,6 +37,7 @@ export function ActivityPage() {
   const usersById = useUsersById()
   const [form, setForm] = useState<FormState>({ kind: 'none' })
   const closeForm = () => setForm({ kind: 'none' })
+  usePageTitle(activity.data?.name)
 
   if (activity.error) {
     return (

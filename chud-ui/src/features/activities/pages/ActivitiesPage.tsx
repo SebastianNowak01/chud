@@ -8,8 +8,10 @@ import { Modal } from '@/components/ui/Modal'
 import { ActivityForm } from '@/features/activities/components/ActivityForm'
 import { useActivities } from '@/features/activities/activities-api'
 import type { Activity } from '@/features/activities/types'
+import { usePageTitle } from '@/lib/use-page-title'
 
 export function ActivitiesPage() {
+  usePageTitle('Aktywności')
   const activities = useActivities()
   const [creating, setCreating] = useState(false)
   const active = activities.data?.filter((a) => !a.archivedAt) ?? []
