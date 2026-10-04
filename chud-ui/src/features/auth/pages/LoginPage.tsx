@@ -9,8 +9,10 @@ import { Field } from '@/components/ui/Field'
 import { AuthApi } from '@/features/auth/auth-api'
 import { storeToken } from '@/features/auth/lib/token'
 import { buttonState } from '@/lib/button-state'
+import { usePageTitle } from '@/lib/use-page-title'
 
 export function LoginPage() {
+  usePageTitle('Logowanie')
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

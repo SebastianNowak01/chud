@@ -7,10 +7,12 @@ import { parseIds, serializeIds, type DashboardFilter } from '@/features/dashboa
 import { WeekSummaryCard } from '@/features/summaries/components/WeekSummaryCard'
 import { useUsers } from '@/features/users/users-api'
 import { useGridRange } from '@/lib/use-grid-range'
+import { usePageTitle } from '@/lib/use-page-title'
 
 const dashboardRoute = getRouteApi('/_authenticated/')
 
 export function DashboardPage() {
+  usePageTitle('Pulpit')
   const search = dashboardRoute.useSearch()
   const navigate = dashboardRoute.useNavigate()
   const users = useUsers()
