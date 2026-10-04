@@ -5,6 +5,7 @@ export const setCookie = (
     maxAge?: number
     path?: string
     sameSite?: string
+    secure?: boolean
   },
 ): void => {
   let cookieString = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`
@@ -19,6 +20,10 @@ export const setCookie = (
 
   if (options?.sameSite) {
     cookieString += `; SameSite=${options.sameSite}`
+  }
+
+  if (options?.secure) {
+    cookieString += '; Secure'
   }
 
   document.cookie = cookieString
