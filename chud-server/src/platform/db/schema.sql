@@ -57,6 +57,16 @@ CREATE TABLE IF NOT EXISTS media (
     data         BYTEA NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS week_summaries (
+    week           DATE        NOT NULL,
+    prompt_version INT         NOT NULL,
+    text           TEXT        NOT NULL,
+    input_hash     TEXT        NOT NULL,
+    generated_at   TIMESTAMPTZ NOT NULL,
+    expires_at     TIMESTAMPTZ,
+    PRIMARY KEY (week, prompt_version)
+);
+
 ALTER TABLE entries DROP CONSTRAINT IF EXISTS entries_plan_id_fkey;
 
 CREATE OR REPLACE FUNCTION pg_temp.add_constraint(tbl TEXT, name TEXT, definition TEXT) RETURNS VOID AS $$
