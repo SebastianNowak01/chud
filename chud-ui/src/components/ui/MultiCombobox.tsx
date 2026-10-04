@@ -96,7 +96,7 @@ export function MultiCombobox({ label, placeholder, emptyText, options, selected
           aria-autocomplete="list"
           aria-activedescendant={open && matches[activeIndex] ? optionId(activeIndex) : undefined}
           autoComplete="off"
-          className="w-full [&_input]:w-full [&_input]:cursor-pointer [&_input]:pr-8"
+          className={`w-full [&_input]:w-full [&_input]:pr-8 ${open ? '[&_input]:cursor-text' : '[&_input]:cursor-pointer'}`}
           placeholder={chosen.length > 0 ? 'Dodaj…' : placeholder}
           value={query}
           onChange={(e) => {
