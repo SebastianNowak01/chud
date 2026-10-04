@@ -5,10 +5,10 @@
     <envs>
       <env name="API_PORT" value="2137" />
       <env name="LOG_LEVEL" value="TRACE" />
-      <env name="JWT_SECRET" value="your_jwt_secret" />
+      <env name="JWT_SECRET" value="dev-only-jwt-secret-change-me-in-prod" />
       <env name="JWT_EXPIRY_HOURS" value="24" />
       <env name="ADMIN_USER" value="admin" />
-      <env name="ADMIN_PASSWORD" value="123123" />
+      <env name="ADMIN_PASSWORD" value="dev-admin-pass" />
       <env name="DATABASE_URL" value="postgres://chud:chud@localhost:5432/chud?sslmode=disable" />
     </envs>
     <kind value="PACKAGE" />
