@@ -16,6 +16,11 @@ services:
       ADMIN_USER: admin
       ADMIN_PASSWORD: 123123
       DATABASE_URL: postgres://chud:chud@db:5432/chud?sslmode=disable
+      LLM_URL: ${LLM_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-3m}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
