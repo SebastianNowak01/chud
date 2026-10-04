@@ -20,15 +20,18 @@ import (
 const (
 	maxRequestSize = MaxFileCount*MaxFileSize + 1<<20
 	maxFormMemory  = 8 << 20
+	maxUploads     = 3
 )
 
 type EntryAPIController struct {
 	service IEntryService
+	uploads chan struct{}
 }
 
 func NewEntryAPIController(service IEntryService) EntryAPIController {
 	return EntryAPIController{
 		service: service,
+		uploads: make(chan struct{}, maxUploads),
 	}
 }
 
@@ -55,6 +58,13 @@ func (c *EntryAPIController) CreateEntryHandler(w http.ResponseWriter, r *http.R
 	}
 	claims, ok := auth.ExtractUserOrRespond(ctx, w, r)
 	if !ok {
+		return
+	}
+
+	select {
+	case c.uploads <- struct{}{}:
+		defer func() { <-c.uploads }()
+	case <-ctx.Done():
 		return
 	}
 
