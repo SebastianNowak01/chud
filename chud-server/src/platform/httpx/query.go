@@ -19,6 +19,10 @@ func DateRangeQuery(r *http.Request) (clock.Date, clock.Date, error) {
 	return from, to, nil
 }
 
+func DateQuery(r *http.Request, key string) (clock.Date, error) {
+	return dateQuery(r, key)
+}
+
 func dateQuery(r *http.Request, key string) (clock.Date, error) {
 	date, err := clock.ParseDate(r.URL.Query().Get(key))
 	if err != nil {
