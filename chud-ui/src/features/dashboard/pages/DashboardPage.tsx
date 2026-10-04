@@ -4,6 +4,7 @@ import { useActivities } from '@/features/activities/activities-api'
 import { DashboardFilters } from '@/features/dashboard/components/DashboardFilters'
 import { Leaderboard } from '@/features/dashboard/components/Leaderboard'
 import { parseIds, serializeIds, type DashboardFilter } from '@/features/dashboard/filters'
+import { WeekSummaryCard } from '@/features/summaries/components/WeekSummaryCard'
 import { useUsers } from '@/features/users/users-api'
 import { useGridRange } from '@/lib/use-grid-range'
 
@@ -33,6 +34,8 @@ export function DashboardPage() {
         filter={filter}
         onChange={setFilter}
       />
+
+      <WeekSummaryCard />
 
       <div className="grid gap-5 lg:grid-cols-2">
         <GroupActivityGrid range={range} onRangeChange={setRange} layout={layout} filter={filter} size="lg" />
