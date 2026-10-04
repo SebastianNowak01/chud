@@ -36,10 +36,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -X github.com/sebnow/chud/platform/meta.Version=$VERSION" \
     -o main .
 
+RUN mkdir -p /app/tmp
+
 FROM scratch
 
 COPY --from=server-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=server-builder --chown=65532:65532 /app/src/main /app/main
+COPY --from=server-builder --chown=65532:65532 /app/tmp /tmp
 
 WORKDIR /app
 USER 65532:65532
