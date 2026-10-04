@@ -4,8 +4,10 @@ import { DrawablyButton } from 'drawably/react'
 import { Card } from '@/components/ui/Card'
 import { Hint } from '@/components/ui/Hint'
 import { errorMessage } from '@/lib/api-client'
+import { usePageTitle } from '@/lib/use-page-title'
 
 export function ErrorPage({ error, reset }: ErrorComponentProps) {
+  usePageTitle('Błąd')
   const router = useRouter()
 
   useEffect(() => {

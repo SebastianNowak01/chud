@@ -8,10 +8,12 @@ import { UserForm } from '@/features/users/components/UserForm'
 import { UserRow } from '@/features/users/components/UserRow'
 import { useUsers } from '@/features/users/users-api'
 import type { User } from '@/features/users/types'
+import { usePageTitle } from '@/lib/use-page-title'
 
 type FormState = { mode: 'closed' } | { mode: 'create' } | { mode: 'edit'; user: User }
 
 export function UsersPage() {
+  usePageTitle('Użytkownicy')
   const users = useUsers()
   const [form, setForm] = useState<FormState>({ mode: 'closed' })
   const closeForm = () => setForm({ mode: 'closed' })
