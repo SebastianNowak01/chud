@@ -36,7 +36,7 @@ type IUserService interface {
 	DeleteUser(ctx context.Context, id string) *apperr.ServiceError
 	Login(ctx context.Context, payload LoginPayload) (*LoginResponse, *apperr.ServiceError)
 	EnsureAdminUserExists(ctx context.Context, username, password string) error
-	IsAdmin(ctx context.Context, id string) (bool, error)
+	Session(ctx context.Context, id string) (*auth.Session, error)
 }
 
 type UserServiceDeps struct {
@@ -126,6 +126,7 @@ func (s *UserService) UpdateUser(
 			return nil, apperr.NewInternalError("failed to hash password: %w", err)
 		}
 		user.PasswordHash = string(hash)
+		user.TokenVersion++
 	}
 
 	updated, err := s.dao.UpdateUser(ctx, user)
@@ -196,7 +197,7 @@ func (s *UserService) Login(ctx context.Context, payload LoginPayload) (*LoginRe
 	}
 	s.loginLimiter.Reset(limitKey)
 
-	token, err := auth.NewJwt(user.ID, user.Username, user.IsAdmin)
+	token, err := auth.NewJwt(user.ID, user.Username, user.IsAdmin, user.TokenVersion)
 	if err != nil {
 		return nil, apperr.NewInternalError("failed to create token: %w", err)
 	}
@@ -210,15 +211,15 @@ func (s *UserService) loginFailed(ctx context.Context, username, limitKey string
 	return apperr.NewUnauthorizedError("nieprawidłowa nazwa użytkownika lub hasło")
 }
 
-func (s *UserService) IsAdmin(ctx context.Context, id string) (bool, error) {
+func (s *UserService) Session(ctx context.Context, id string) (*auth.Session, error) {
 	user, err := s.dao.GetUserByID(ctx, id)
 	if errors.Is(err, db.ErrNotFound) {
-		return false, nil
+		return nil, nil
 	}
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	return user.IsAdmin, nil
+	return &auth.Session{Version: user.TokenVersion, IsAdmin: user.IsAdmin}, nil
 }
 
 func (s *UserService) EnsureAdminUserExists(ctx context.Context, username, password string) error {
@@ -228,11 +229,6 @@ func (s *UserService) EnsureAdminUserExists(ctx context.Context, username, passw
 		return fmt.Errorf("invalid %s: %w", config.AdminPassword, svcErr.Err)
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-
 	if err := s.dao.DemoteAdminsExcept(ctx, username); err != nil {
 		return err
 	}
@@ -240,14 +236,25 @@ func (s *UserService) EnsureAdminUserExists(ctx context.Context, username, passw
 	existing, err := s.dao.GetUserByUsername(ctx, username)
 	switch {
 	case err == nil:
-		existing.PasswordHash = string(hash)
+		if bcrypt.CompareHashAndPassword([]byte(existing.PasswordHash), []byte(password)) != nil {
+			hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+			if err != nil {
+				return err
+			}
+			existing.PasswordHash = string(hash)
+			existing.TokenVersion++
+		}
 		existing.IsAdmin = true
 		if _, err := s.dao.UpdateUser(ctx, existing); err != nil {
 			return err
 		}
 		logger.Info().Str("username", username).Msg("Admin user reset from environment")
 	case errors.Is(err, db.ErrNotFound):
-		_, err := s.dao.InsertUser(ctx, &User{
+		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		_, err = s.dao.InsertUser(ctx, &User{
 			ID:           uuid.NewString(),
 			Username:     username,
 			PasswordHash: string(hash),

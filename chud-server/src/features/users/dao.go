@@ -70,7 +70,7 @@ func (r *UserDAO) UpdateUser(ctx context.Context, user *User) (*User, error) {
 			ctx,
 			r.pool,
 			`UPDATE users
-			SET username = $2, password_hash = $3, is_admin = $4, color = $5, updated_at = NOW()
+			SET username = $2, password_hash = $3, is_admin = $4, color = $5, token_version = $6, updated_at = NOW()
 			WHERE id = $1
 			RETURNING *`,
 			user.ID,
@@ -78,6 +78,7 @@ func (r *UserDAO) UpdateUser(ctx context.Context, user *User) (*User, error) {
 			user.PasswordHash,
 			user.IsAdmin,
 			user.Color,
+			user.TokenVersion,
 		)
 	})
 }

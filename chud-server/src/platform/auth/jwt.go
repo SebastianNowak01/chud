@@ -15,6 +15,7 @@ type UserClaims struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	IsAdmin  bool   `json:"is_admin"`
+	Version  int    `json:"token_version"`
 }
 
 func ValidateJwt(token string) (*UserClaims, error) {
@@ -47,7 +48,7 @@ func ValidateJwt(token string) (*UserClaims, error) {
 	return claims, nil
 }
 
-func NewJwt(userID, username string, isAdmin bool) (string, error) {
+func NewJwt(userID, username string, isAdmin bool, version int) (string, error) {
 	expiryHours, err := strconv.Atoi(os.Getenv(config.JwtExpiryHours))
 	if err != nil {
 		return "", fmt.Errorf("invalid JwtExpiryHours value: %w", err)
@@ -64,6 +65,7 @@ func NewJwt(userID, username string, isAdmin bool) (string, error) {
 			UserID:   userID,
 			Username: username,
 			IsAdmin:  isAdmin,
+			Version:  version,
 		},
 	)
 	token, err := jwtToken.SignedString([]byte(os.Getenv(config.JwtSecret)))

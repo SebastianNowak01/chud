@@ -8,6 +8,7 @@ type User struct {
 	PasswordHash string    `db:"password_hash" json:"-"`
 	IsAdmin      bool      `db:"is_admin"      json:"isAdmin"`
 	Color        string    `db:"color"         json:"color"`
+	TokenVersion int       `db:"token_version" json:"-"`
 	CreatedAt    time.Time `db:"created_at"    json:"createdAt"`
 	UpdatedAt    time.Time `db:"updated_at"    json:"updatedAt"`
 }

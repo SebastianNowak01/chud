@@ -12,7 +12,7 @@ func TestJwtRoundTrip(t *testing.T) {
 	t.Setenv(config.JwtSecret, "test-secret")
 	t.Setenv(config.JwtExpiryHours, "1")
 
-	token, err := NewJwt("id-1", "admin", true)
+	token, err := NewJwt("id-1", "admin", true, 0)
 	require.NoError(t, err)
 
 	claims, err := ValidateJwt(token)
@@ -26,7 +26,7 @@ func TestJwtRejectsWrongSecret(t *testing.T) {
 	t.Setenv(config.JwtSecret, "test-secret")
 	t.Setenv(config.JwtExpiryHours, "1")
 
-	token, err := NewJwt("id-1", "admin", true)
+	token, err := NewJwt("id-1", "admin", true, 0)
 	require.NoError(t, err)
 
 	t.Setenv(config.JwtSecret, "other-secret")
@@ -38,7 +38,7 @@ func TestJwtRejectsExpired(t *testing.T) {
 	t.Setenv(config.JwtSecret, "test-secret")
 	t.Setenv(config.JwtExpiryHours, "-1")
 
-	token, err := NewJwt("id-1", "admin", true)
+	token, err := NewJwt("id-1", "admin", true, 0)
 	require.NoError(t, err)
 
 	_, err = ValidateJwt(token)
