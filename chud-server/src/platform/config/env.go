@@ -17,6 +17,9 @@ const (
 	AdminPassword  = "ADMIN_PASSWORD"
 	DatabaseURL    = "DATABASE_URL"
 	AppTimezone    = "APP_TIMEZONE"
+	LLMURL         = "LLM_URL"
+	LLMModel       = "LLM_MODEL"
+	LLMTimeout     = "LLM_TIMEOUT"
 )
 
 func Validate() error {
