@@ -5,6 +5,7 @@ import (
 	"github.com/sebnow/chud/features/entries"
 	"github.com/sebnow/chud/features/plans"
 	"github.com/sebnow/chud/features/stats"
+	"github.com/sebnow/chud/features/summaries"
 	"github.com/sebnow/chud/features/users"
 )
 
@@ -14,4 +15,5 @@ type Handlers struct {
 	Plan     plans.PlanAPIController
 	Entry    entries.EntryAPIController
 	Stats    stats.StatsAPIController
+	Summary  summaries.SummaryAPIController
 }

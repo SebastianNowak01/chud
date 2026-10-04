@@ -14,10 +14,12 @@ import (
 	"github.com/sebnow/chud/features/entries"
 	"github.com/sebnow/chud/features/plans"
 	"github.com/sebnow/chud/features/stats"
+	"github.com/sebnow/chud/features/summaries"
 	"github.com/sebnow/chud/features/users"
 	"github.com/sebnow/chud/platform/clock"
 	"github.com/sebnow/chud/platform/config"
 	"github.com/sebnow/chud/platform/db"
+	"github.com/sebnow/chud/platform/llm"
 	"github.com/sebnow/chud/platform/log"
 )
 
@@ -73,6 +75,25 @@ func main() {
 		UserDAO:  userDAO,
 	})
 
+	llmConfig, err := llm.ConfigFromEnv()
+	if err != nil {
+		logger.Warn().Err(err).Msg("LLM configuration")
+	}
+	llmClient := llm.New(llmConfig)
+	if llmClient.Enabled() {
+		logger.Info().Str("url", llmConfig.URL).Str("model", llmConfig.Model).Msg("LLM summaries enabled")
+	} else {
+		logger.Info().Msg("LLM summaries disabled, LLM_URL is not set")
+	}
+	summaryService := summaries.NewSummaryService(summaries.SummaryServiceDeps{
+		Ctx:          appCtx,
+		SummaryDAO:   summaries.NewSummaryDAO(database.Querier()),
+		StatsService: statsService,
+		UserDAO:      userDAO,
+		ActivityDAO:  activityDAO,
+		LLM:          llmClient,
+	})
+
 	err = userService.EnsureAdminUserExists(appCtx, os.Getenv(config.AdminUser), os.Getenv(config.AdminPassword))
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to ensure admin user exists")
@@ -84,6 +105,7 @@ func main() {
 		Plan:     plans.NewPlanAPIController(planService),
 		Entry:    entries.NewEntryAPIController(entryService),
 		Stats:    stats.NewStatsAPIController(statsService),
+		Summary:  summaries.NewSummaryAPIController(summaryService),
 	}
 
 	serverConfig := app.DefaultServerConfig()

@@ -8,6 +8,7 @@ import (
 	"github.com/sebnow/chud/features/entries"
 	"github.com/sebnow/chud/features/plans"
 	"github.com/sebnow/chud/features/stats"
+	"github.com/sebnow/chud/features/summaries"
 	"github.com/sebnow/chud/features/users"
 )
 
@@ -23,6 +24,7 @@ func SetupRouters(
 	plans.RegisterRoutes(protectedRouter, h.Plan)
 	entries.RegisterRoutes(protectedRouter, h.Entry)
 	stats.RegisterRoutes(protectedRouter, h.Stats)
+	summaries.RegisterRoutes(protectedRouter, h.Summary)
 
 	publicRouter.HandleFunc("GET /api/v1/health", GetHealthCheckHandler)
 
