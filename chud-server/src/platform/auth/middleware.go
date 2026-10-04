@@ -9,7 +9,14 @@ import (
 	"github.com/sebnow/chud/platform/httpx"
 )
 
-func JwtAuth(next http.Handler) http.Handler {
+type Session struct {
+	Version int
+	IsAdmin bool
+}
+
+type SessionLookup func(ctx context.Context, userID string) (*Session, error)
+
+func JwtAuth(lookup SessionLookup, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -24,6 +31,17 @@ func JwtAuth(next http.Handler) http.Handler {
 			httpx.RespondError(ctx, w, http.StatusUnauthorized, fmt.Errorf("nieprawidłowy token, zaloguj się ponownie"))
 			return
 		}
+
+		session, err := lookup(ctx, userClaims.UserID)
+		if err != nil {
+			httpx.RespondError(ctx, w, http.StatusInternalServerError, err)
+			return
+		}
+		if session == nil || session.Version != userClaims.Version {
+			httpx.RespondError(ctx, w, http.StatusUnauthorized, fmt.Errorf("sesja wygasła, zaloguj się ponownie"))
+			return
+		}
+		userClaims.IsAdmin = session.IsAdmin
 
 		next.ServeHTTP(w, r.WithContext(SetUserInContext(ctx, userClaims)))
 	})
@@ -48,26 +66,17 @@ func isMediaRequest(r *http.Request) bool {
 	return (r.Method == http.MethodGet || r.Method == http.MethodHead) && strings.HasPrefix(r.URL.Path, "/api/v1/media/")
 }
 
-type AdminCheck func(ctx context.Context, userID string) (bool, error)
-
-func RequireAdmin(isAdmin AdminCheck) func(http.HandlerFunc) http.HandlerFunc {
-	return func(next http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
-			user, ok := ExtractUserOrRespond(ctx, w, r)
-			if !ok {
-				return
-			}
-			admin, err := isAdmin(ctx, user.UserID)
-			if err != nil {
-				httpx.RespondError(ctx, w, http.StatusInternalServerError, err)
-				return
-			}
-			if !user.IsAdmin || !admin {
-				httpx.RespondError(ctx, w, http.StatusForbidden, fmt.Errorf("wymagane uprawnienia administratora"))
-				return
-			}
-			next(w, r)
+func RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		user, ok := ExtractUserOrRespond(ctx, w, r)
+		if !ok {
+			return
 		}
+		if !user.IsAdmin {
+			httpx.RespondError(ctx, w, http.StatusForbidden, fmt.Errorf("wymagane uprawnienia administratora"))
+			return
+		}
+		next(w, r)
 	}
 }

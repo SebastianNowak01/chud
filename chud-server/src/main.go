@@ -106,6 +106,7 @@ func main() {
 		Entry:    entries.NewEntryAPIController(entryService),
 		Stats:    stats.NewStatsAPIController(statsService),
 		Summary:  summaries.NewSummaryAPIController(summaryService),
+		Session:  userService.Session,
 	}
 
 	serverConfig := app.DefaultServerConfig()

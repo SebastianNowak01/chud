@@ -220,25 +220,65 @@ func TestLoginRateLimit(t *testing.T) {
 	assert.Equal(t, http.StatusTooManyRequests, svcErr.Code, "blocked even with the right password")
 }
 
-func TestIsAdmin(t *testing.T) {
+func TestSession(t *testing.T) {
 	ctx := context.Background()
 	svc := newTestService(t)
 	admin := findAdmin(t, svc)
 	alice, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "alice", Password: "secret11"})
 	require.Nil(t, svcErr)
 
-	isAdmin, err := svc.IsAdmin(ctx, admin.ID)
+	session, err := svc.Session(ctx, admin.ID)
 	require.NoError(t, err)
-	assert.True(t, isAdmin)
+	assert.True(t, session.IsAdmin)
 
-	isAdmin, err = svc.IsAdmin(ctx, alice.ID)
+	session, err = svc.Session(ctx, alice.ID)
 	require.NoError(t, err)
-	assert.False(t, isAdmin)
+	assert.False(t, session.IsAdmin)
 
 	require.NoError(t, svc.EnsureAdminUserExists(ctx, "root", "root-pass"))
-	isAdmin, err = svc.IsAdmin(ctx, admin.ID)
+	session, err = svc.Session(ctx, admin.ID)
 	require.NoError(t, err)
-	assert.False(t, isAdmin, "demoted admin loses access despite old token")
+	assert.False(t, session.IsAdmin, "demoted admin loses access despite old token")
+
+	require.Nil(t, svc.DeleteUser(ctx, alice.ID))
+	session, err = svc.Session(ctx, alice.ID)
+	require.NoError(t, err)
+	assert.Nil(t, session, "deleted user has no session")
+}
+
+func TestPasswordChangeRevokesTokens(t *testing.T) {
+	ctx := context.Background()
+	svc := newTestService(t)
+	alice, svcErr := svc.CreateUser(ctx, CreateUserPayload{Username: "alice", Password: "secret11"})
+	require.Nil(t, svcErr)
+
+	_, svcErr = svc.UpdateUser(ctx, alice.ID, UpdateUserPayload{Username: "alice"})
+	require.Nil(t, svcErr)
+	session, err := svc.Session(ctx, alice.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, session.Version, "rename keeps tokens")
+
+	_, svcErr = svc.UpdateUser(ctx, alice.ID, UpdateUserPayload{Username: "alice", Password: "secret22"})
+	require.Nil(t, svcErr)
+	session, err = svc.Session(ctx, alice.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, session.Version)
+}
+
+func TestAdminRestartKeepsTokensUntilPasswordChanges(t *testing.T) {
+	ctx := context.Background()
+	svc := newTestService(t)
+	admin := findAdmin(t, svc)
+
+	require.NoError(t, svc.EnsureAdminUserExists(ctx, "admin", "admin-pass"))
+	session, err := svc.Session(ctx, admin.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, session.Version)
+
+	require.NoError(t, svc.EnsureAdminUserExists(ctx, "admin", "other-pass"))
+	session, err = svc.Session(ctx, admin.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, session.Version)
 }
 
 func TestEnsureAdminUserExistsRejectsWeakPassword(t *testing.T) {
