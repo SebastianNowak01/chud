@@ -35,10 +35,17 @@ func tokenFromRequest(r *http.Request) string {
 	if token, found := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); found {
 		return token
 	}
+	if !isMediaRequest(r) {
+		return ""
+	}
 	if cookie, err := r.Cookie(LoginTokenCookie); err == nil {
 		return cookie.Value
 	}
 	return ""
+}
+
+func isMediaRequest(r *http.Request) bool {
+	return (r.Method == http.MethodGet || r.Method == http.MethodHead) && strings.HasPrefix(r.URL.Path, "/api/v1/media/")
 }
 
 type AdminCheck func(ctx context.Context, userID string) (bool, error)

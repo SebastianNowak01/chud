@@ -11,7 +11,8 @@ export const storeToken = (jwt: string): void => {
   setCookie(LOGIN_TOKEN_COOKIE, jwt, {
     maxAge: TOKEN_MAX_AGE_SECONDS,
     path: '/',
-    sameSite: 'Lax',
+    sameSite: 'Strict',
+    secure: window.location.protocol === 'https:',
   })
 }
 
