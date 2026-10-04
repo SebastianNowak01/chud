@@ -86,3 +86,17 @@ func resourceName(resource string) string {
 	}
 	return resource
 }
+
+func NewTooManyRequestsError(format string, args ...any) *ServiceError {
+	return &ServiceError{
+		Code: http.StatusTooManyRequests,
+		Err:  fmt.Errorf(format, args...),
+	}
+}
+
+func NewUnavailableError(format string, args ...any) *ServiceError {
+	return &ServiceError{
+		Code: http.StatusServiceUnavailable,
+		Err:  fmt.Errorf(format, args...),
+	}
+}
