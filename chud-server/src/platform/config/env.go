@@ -20,6 +20,7 @@ const (
 	LLMURL         = "LLM_URL"
 	LLMModel       = "LLM_MODEL"
 	LLMTimeout     = "LLM_TIMEOUT"
+	LLMMaxTokens   = "LLM_MAX_TOKENS"
 )
 
 const minJwtSecretLength = 32

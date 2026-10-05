@@ -17,9 +17,11 @@ func TestConfigFromEnv(t *testing.T) {
 	t.Run("defaults", func(t *testing.T) {
 		t.Setenv(config.LLMURL, "")
 		t.Setenv(config.LLMTimeout, "")
+		t.Setenv(config.LLMMaxTokens, "")
 		cfg, err := ConfigFromEnv()
 		require.NoError(t, err)
 		assert.Equal(t, DefaultTimeout, cfg.Timeout)
+		assert.Equal(t, DefaultMaxTokens, cfg.MaxTokens)
 		assert.False(t, New(cfg).Enabled())
 	})
 
@@ -27,17 +29,21 @@ func TestConfigFromEnv(t *testing.T) {
 		t.Setenv(config.LLMURL, " http://localhost:11434/ ")
 		t.Setenv(config.LLMModel, "qwen3:4b")
 		t.Setenv(config.LLMTimeout, "90s")
+		t.Setenv(config.LLMMaxTokens, "250")
 		cfg, err := ConfigFromEnv()
 		require.NoError(t, err)
-		assert.Equal(t, Config{URL: "http://localhost:11434", Model: "qwen3:4b", Timeout: 90 * time.Second}, cfg)
+		assert.Equal(t, Config{URL: "http://localhost:11434", Model: "qwen3:4b", Timeout: 90 * time.Second, MaxTokens: 250}, cfg)
 		assert.True(t, New(cfg).Enabled())
 	})
 
-	t.Run("invalid timeout falls back to default", func(t *testing.T) {
+	t.Run("invalid values fall back to defaults", func(t *testing.T) {
 		t.Setenv(config.LLMTimeout, "soon")
+		t.Setenv(config.LLMMaxTokens, "lots")
 		cfg, err := ConfigFromEnv()
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, config.LLMTimeout)
+		assert.ErrorContains(t, err, config.LLMMaxTokens)
 		assert.Equal(t, DefaultTimeout, cfg.Timeout)
+		assert.Equal(t, DefaultMaxTokens, cfg.MaxTokens)
 	})
 }
 
@@ -64,8 +70,9 @@ func TestComplete(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "Dobry tydzień.", text)
 		assert.Equal(t, completionRequest{
-			Model:    "m",
-			Messages: []message{{Role: "system", Content: "sys"}, {Role: "user", Content: "facts"}},
+			Model:     "m",
+			Messages:  []message{{Role: "system", Content: "sys"}, {Role: "user", Content: "facts"}},
+			MaxTokens: DefaultMaxTokens,
 		}, got)
 	})
 

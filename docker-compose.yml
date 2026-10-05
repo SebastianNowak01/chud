@@ -18,7 +18,8 @@ services:
       DATABASE_URL: postgres://chud:chud@db:5432/chud?sslmode=disable
       LLM_URL: ${LLM_URL:-}
       LLM_MODEL: ${LLM_MODEL:-}
-      LLM_TIMEOUT: ${LLM_TIMEOUT:-3m}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-6m}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-400}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

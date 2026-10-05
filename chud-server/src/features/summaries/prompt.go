@@ -3,15 +3,16 @@ package summaries
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
-const PromptVersion = 1
+const PromptVersion = 2
 
 const maxSummaryLength = 2000
 
 const systemPrompt = `Jesteś komentatorem w grupowej aplikacji do pilnowania nawyków. Dostajesz fakty z jednego tygodnia w formacie JSON.
 
-Napisz po polsku krótkie podsumowanie tygodnia: 4–7 zdań zwykłego tekstu, bez nagłówków, list i formatowania.
+Napisz po polsku krótkie podsumowanie tygodnia: 3–5 zdań zwykłego tekstu, bez nagłówków, list i formatowania.
 
 Zasady:
 - Używaj wyłącznie imion, liczb i aktywności z danych. Niczego nie wymyślaj i nie licz od nowa.
@@ -25,10 +26,14 @@ func userPrompt(factsJSON string) string {
 	return "Fakty z tygodnia:\n" + factsJSON
 }
 
-var thinkBlock = regexp.MustCompile(`(?s)<think>.*?</think>`)
+var thinkBlock = regexp.MustCompile(`(?s)<think>.*?(</think>|$)`)
 
 func cleanResponse(text string) string {
 	text = strings.TrimSpace(thinkBlock.ReplaceAllString(text, ""))
+	if end := strings.LastIndexAny(text, ".!?…"); end >= 0 {
+		_, size := utf8.DecodeRuneInString(text[end:])
+		text = text[:end+size]
+	}
 	runes := []rune(text)
 	if len(runes) > maxSummaryLength {
 		text = strings.TrimSpace(string(runes[:maxSummaryLength])) + "…"

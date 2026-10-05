@@ -81,7 +81,7 @@ func main() {
 	}
 	llmClient := llm.New(llmConfig)
 	if llmClient.Enabled() {
-		logger.Info().Str("url", llmConfig.URL).Str("model", llmConfig.Model).Msg("LLM summaries enabled")
+		logger.Info().Str("url", llmConfig.URL).Str("model", llmConfig.Model).Dur("timeout", llmConfig.Timeout).Int("max_tokens", llmConfig.MaxTokens).Msg("LLM summaries enabled")
 	} else {
 		logger.Info().Msg("LLM summaries disabled, LLM_URL is not set")
 	}
