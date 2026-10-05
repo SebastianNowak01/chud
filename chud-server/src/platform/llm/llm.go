@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,7 +17,8 @@ import (
 )
 
 const (
-	DefaultTimeout   = 3 * time.Minute
+	DefaultTimeout   = 6 * time.Minute
+	DefaultMaxTokens = 400
 	maxResponseBytes = 1 << 20
 	completionsPath  = "/v1/chat/completions"
 )
@@ -24,27 +26,35 @@ const (
 var ErrDisabled = errors.New("llm is not configured")
 
 type Config struct {
-	URL     string
-	Model   string
-	Timeout time.Duration
+	URL       string
+	Model     string
+	Timeout   time.Duration
+	MaxTokens int
 }
 
 func ConfigFromEnv() (Config, error) {
 	cfg := Config{
-		URL:     strings.TrimRight(strings.TrimSpace(os.Getenv(config.LLMURL)), "/"),
-		Model:   strings.TrimSpace(os.Getenv(config.LLMModel)),
-		Timeout: DefaultTimeout,
+		URL:       strings.TrimRight(strings.TrimSpace(os.Getenv(config.LLMURL)), "/"),
+		Model:     strings.TrimSpace(os.Getenv(config.LLMModel)),
+		Timeout:   DefaultTimeout,
+		MaxTokens: DefaultMaxTokens,
 	}
-	raw := strings.TrimSpace(os.Getenv(config.LLMTimeout))
-	if raw == "" {
-		return cfg, nil
+	var errs []error
+	if raw := strings.TrimSpace(os.Getenv(config.LLMTimeout)); raw != "" {
+		if timeout, err := time.ParseDuration(raw); err == nil && timeout > 0 {
+			cfg.Timeout = timeout
+		} else {
+			errs = append(errs, fmt.Errorf("invalid %s %q, using %s", config.LLMTimeout, raw, DefaultTimeout))
+		}
 	}
-	timeout, err := time.ParseDuration(raw)
-	if err != nil || timeout <= 0 {
-		return cfg, fmt.Errorf("invalid %s %q, using %s", config.LLMTimeout, raw, DefaultTimeout)
+	if raw := strings.TrimSpace(os.Getenv(config.LLMMaxTokens)); raw != "" {
+		if maxTokens, err := strconv.Atoi(raw); err == nil && maxTokens > 0 {
+			cfg.MaxTokens = maxTokens
+		} else {
+			errs = append(errs, fmt.Errorf("invalid %s %q, using %d", config.LLMMaxTokens, raw, DefaultMaxTokens))
+		}
 	}
-	cfg.Timeout = timeout
-	return cfg, nil
+	return cfg, errors.Join(errs...)
 }
 
 type Completer interface {
@@ -61,6 +71,9 @@ func New(cfg Config) *Client {
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = DefaultTimeout
 	}
+	if cfg.MaxTokens <= 0 {
+		cfg.MaxTokens = DefaultMaxTokens
+	}
 	return &Client{cfg: cfg, http: &http.Client{}}
 }
 
@@ -74,9 +87,10 @@ type message struct {
 }
 
 type completionRequest struct {
-	Model    string    `json:"model,omitempty"`
-	Messages []message `json:"messages"`
-	Stream   bool      `json:"stream"`
+	Model     string    `json:"model,omitempty"`
+	Messages  []message `json:"messages"`
+	Stream    bool      `json:"stream"`
+	MaxTokens int       `json:"max_tokens"`
 }
 
 type completionResponse struct {
@@ -98,6 +112,7 @@ func (c *Client) Complete(ctx context.Context, system, prompt string) (string, e
 			{Role: "system", Content: system},
 			{Role: "user", Content: prompt},
 		},
+		MaxTokens: c.cfg.MaxTokens,
 	})
 	if err != nil {
 		return "", err

@@ -126,5 +126,7 @@ func TestWeekExpiry(t *testing.T) {
 
 func TestCleanResponse(t *testing.T) {
 	assert.Equal(t, "Dobry tydzień.", cleanResponse("<think>\nliczę\n</think>\n\n Dobry tydzień. "))
+	assert.Equal(t, "Dobry tydzień. Ania prowadzi!", cleanResponse("Dobry tydzień. Ania prowadzi! A Bartek w tym tyg"), "unfinished sentence is cut")
+	assert.Empty(t, cleanResponse("<think>liczę punkty i jeszcze"), "unclosed reasoning is dropped")
 	assert.Equal(t, maxSummaryLength+1, len([]rune(cleanResponse(strings.Repeat("x", maxSummaryLength+5)))))
 }
